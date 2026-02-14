@@ -44,12 +44,11 @@ int main(int argc, char * const argv[]) {
             return 0;
         case cli::ParseStatus::ExitFailure:
             return 1;
-    default:
-        config.usage(args.program_name());
-        break;
+        case cli::ParseStatus::Ok:
+            break;
     }
 
-    SDRPipeline pipeline(config);
+    SDRPipeline pipeline(config.settings());
 
     try {
         pipeline.run();

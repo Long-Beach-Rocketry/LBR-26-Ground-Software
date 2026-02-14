@@ -9,14 +9,16 @@
 
 #include <iostream>
 
-SDRPipeline::SDRPipeline(const cli::Config &config) : _config(config) {}
+SDRPipeline::SDRPipeline(const cli::RuntimeSettings &settings) : _settings(settings) {}
 
 void SDRPipeline::run() {
-    if (_config.verbose()) {
-        std::cout << "Starting SDR pipeline";
-        if (!_config.config_file().empty())
-            std::cout << " with config: " << _config.config_file();
+    if (!_settings.pipeline.verbose)
+        return;
 
-        std::cout << '\n';
-    }
+    std::cout << "Starting SDR pipeline\n"
+              << "  device: " << _settings.sdr.device << '\n'
+              << "  sample_rate_hz: " << _settings.sdr.sample_rate_hz << '\n'
+              << "  center_freq_hz: " << _settings.sdr.center_freq_hz << '\n'
+              << "  gain_db: " << _settings.sdr.gain_db << '\n'
+              << "  output_path: " << _settings.pipeline.output_path << '\n';
 }
