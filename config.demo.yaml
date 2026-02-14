@@ -1,0 +1,12 @@
+# Demo configuration file for LBR-26 Ground Software
+# Note: in the current codebase, this file is not parsed yet.
+
+sdr:
+  device: "rtlsdr"
+  sample_rate_hz: 2048000
+  center_freq_hz: 433920000
+  gain_db: 30
+
+pipeline:
+  verbose: true
+  output_path: "output/frame.bin"
