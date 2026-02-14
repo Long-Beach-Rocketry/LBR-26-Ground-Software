@@ -13,9 +13,9 @@ class SDRPipeline {
     public:
         /**
          * @brief Creates the SDR pipeline instance from validated runtime config.
-         * @param config Application configuration produced by CLI parsing.
+         * @param settings Runtime settings produced by CLI and config parsing.
          */
-        explicit SDRPipeline(const cli::Config &config);
+        explicit SDRPipeline(const cli::RuntimeSettings &settings);
 
         /**
          * @brief Starts the SDR processing workflow.
@@ -23,5 +23,5 @@ class SDRPipeline {
         void run();
 
     private:
-        cli::Config _config;
+        cli::RuntimeSettings _settings;
 };

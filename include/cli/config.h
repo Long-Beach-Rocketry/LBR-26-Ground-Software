@@ -13,6 +13,23 @@
 #include <string_view>
 
 namespace cli {
+    struct SdrSettings {
+        std::string device = "rtlsdr";
+        int sample_rate_hz = 2048000;
+        int center_freq_hz = 433920000;
+        int gain_db = 30;
+    };
+
+    struct PipelineSettings {
+        bool verbose = false;
+        std::string output_path = "output/frame.bin";
+    };
+
+    struct RuntimeSettings {
+        SdrSettings sdr;
+        PipelineSettings pipeline;
+    };
+
     enum class ParseStatus {
         Ok,
         ExitSuccess,
@@ -46,8 +63,22 @@ namespace cli {
              */
             bool verbose() const noexcept;
 
+            /**
+             * @brief Returns parsed runtime settings used by the SDR pipeline.
+             * @return Immutable runtime settings structure.
+             */
+            const RuntimeSettings &settings() const noexcept;
+
         private:
+            /**
+             * @brief Parses settings from the YAML file path stored in this config.
+             * @param error_message Output parse error details when parsing fails.
+             * @return True when config file parsing and validation succeeded.
+             */
+            bool parse_config_file(std::string &error_message);
+
             std::string _config_file;
             bool _verbose = false;
+            RuntimeSettings _settings;
     };
 }

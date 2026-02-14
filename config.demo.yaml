@@ -1,5 +1,4 @@
 # Demo configuration file for LBR-26 Ground Software
-# Note: in the current codebase, this file is not parsed yet.
 
 sdr:
   device: "rtlsdr"
