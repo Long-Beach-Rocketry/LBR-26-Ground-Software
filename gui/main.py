@@ -12,7 +12,7 @@ Main file which gets everything running
 import sys
 from PySide6.QtWidgets import QApplication
 from gui.data.mockdata import MockDataSource
-from gui.ui.main_window import MainWindow
+from gui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
