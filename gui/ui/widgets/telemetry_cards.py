@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gui.models.models import TelemetryFrame
+from models.models import TelemetryFrame
 
 class MetricCard(QFrame):
     def __init__(self, label, unit, parent = None):

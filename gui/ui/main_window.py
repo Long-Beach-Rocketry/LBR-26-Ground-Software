@@ -8,11 +8,11 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from gui.data.data import DataSource
-from gui.models.models import SystemStatus, TelemetryFrame
-from gui.ui.widgets.log_panel import LogPanel
-from gui.ui.widgets.status_bar import StatusBar
-from gui.ui.widgets.telemetry_cards import TelemetryCardsPanel
+from data.data import DataSource
+from models.models import SystemStatus, TelemetryFrame
+from ui.widgets.log_panel import LogPanel
+from ui.widgets.status_bar import StatusBar
+from ui.widgets.telemetry_cards import TelemetryCardsPanel
 
 class MainWindow(QMainWindow):
     def __init__(self, datasource: DataSource):

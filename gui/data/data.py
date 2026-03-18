@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from gui.models.models import TelemetryFrame, SystemStatus
+from models.models import TelemetryFrame, SystemStatus
 
 class DataSource(ABC):
     def __init__(self):

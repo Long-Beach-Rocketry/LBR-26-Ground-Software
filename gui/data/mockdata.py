@@ -1,7 +1,7 @@
 from datetime import datetime
 from PySide6.QtCore import QTimer
-from gui.data.data import DataSource
-from gui.models.models import ConnectionState, SDRConfig, SystemStatus, TelemetryFrame
+from data.data import DataSource
+from models.models import ConnectionState, SDRConfig, SystemStatus, TelemetryFrame
 
 
 Mock_SDR_Config = SDRConfig(
