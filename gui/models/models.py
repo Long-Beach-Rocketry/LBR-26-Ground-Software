@@ -47,6 +47,7 @@ class TelemetryFrame:
 
     temperature: float = 0.0
     battery: float = 0.0
+    pressure_pa: float = 1011325.0
 
     signal: float = 0.0
     packet_count: int = 0

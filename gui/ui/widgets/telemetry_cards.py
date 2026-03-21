@@ -127,10 +127,11 @@ class TelemetryCardsPanel(QWidget):
 
         self._temp = MetricCard("Temperature", "C")
         self._battery = MetricCard("Battery", "V")
+        self._pressure = MetricCard("Pressure", "Pa")
 
         sys_grid.addWidget(self._temp, 0, 0)
         sys_grid.addWidget(self._battery, 0, 1)
-        sys_grid.addWidget(QWidget(), 0, 2)
+        sys_grid.addWidget(self._pressure, 0, 2)
         root.addLayout(sys_grid)
 
         root.addWidget(SectionHeader("RF Link"))
@@ -158,6 +159,9 @@ class TelemetryCardsPanel(QWidget):
 
         self._battery.set_value(frame.battery, 2)
         self._battery.set_alert(frame.battery < 5.0)
+
+        self._pressure.set_value(frame.pressure_pa, 0)
+        self._pressure.set_alert(frame.pressure_pa < 50000)
 
         self._rssi.set_value(frame.signal, 1)
         self._rssi.set_alert(frame.signal < -90)

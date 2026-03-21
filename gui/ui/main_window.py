@@ -1,11 +1,12 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QMainWindow,
-    QWidget,
-    QVBoxLayout,
     QScrollArea,
-    QSplitter,
     QSizePolicy,
+    QSplitter,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from data.data import DataSource
@@ -13,6 +14,8 @@ from models.models import SystemStatus, TelemetryFrame
 from ui.widgets.log_panel import LogPanel
 from ui.widgets.status_bar import StatusBar
 from ui.widgets.telemetry_cards import TelemetryCardsPanel
+from ui.widgets.graphs_panel import GraphsPanel
+from ui.widgets.terminal_panel import TerminalPanel
 
 class MainWindow(QMainWindow):
     def __init__(self, datasource: DataSource):
@@ -22,7 +25,7 @@ class MainWindow(QMainWindow):
 
         # Window setup
         self.setWindowTitle("Ground Station GUI")
-        self.setMinimumSize(860, 600)
+        self.setMinimumSize(960, 680)
 
         # Building the UI
         self._build_ui()
@@ -39,6 +42,7 @@ class MainWindow(QMainWindow):
             f"SDR config: {cfg.device.upper()} at {cfg.center_freq_mhz:.1f} MHz"
             f"SR: {cfg.sample_rate_mhz:.1f} MSPS Gain: {cfg.gain_db} dB"
         )
+        self._log.log_info("Open termianl tab and connect port to send commands")
 
     def _build_ui(self):
         central_widget = QWidget()
@@ -54,6 +58,9 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setHandleWidth(4)
 
+        self._tabs = QTabWidget()
+        self._tabs.setObjectName("MainTabs")
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
@@ -68,12 +75,20 @@ class MainWindow(QMainWindow):
         cards_layout.addStretch()
 
         scroll_area.setWidget(cards_container)
-        splitter.addWidget(scroll_area)
+        self._tabs.addTab(scroll_area, "📊  Telemetry")
+ 
+        self._graphs = GraphsPanel()
+        self._tabs.addTab(self._graphs, "📈  Graphs")
+
+        self._terminal = TerminalPanel()
+        self._tabs.addTab(self._terminal, "💻  Terminal")
+ 
+        splitter.addWidget(self._tabs)
 
         self._log = LogPanel()
         splitter.addWidget(self._log)
 
-        splitter.setSizes([420, 180])
+        splitter.setSizes([500, 180])
 
         root_layout.addWidget(splitter)
 
@@ -81,7 +96,31 @@ class MainWindow(QMainWindow):
         self.setStyleSheet("""
             QMainWindow, QWidget {
                 background-color: #f8fafc;
-                front-family: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+                font-family: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            }
+            QTabWidget#MainTabs::pane {
+                border: none;
+                background: #f8fafc;
+            }
+            QTabWidget#MainTabs > QTabBar::tab {
+                background: #f1f5f9;
+                color: #64748b;
+                padding: 8px 20px;
+                border: none;
+                border-bottom: 2px solid transparent;
+                font-size: 12px;
+                font-weight: 500;
+                min-width: 120px;
+            }
+            QTabWidget#MainTabs > QTabBar::tab:selected {
+                background: #ffffff;
+                color: #0f172a;
+                border-bottom: 2px solid #3b82f6;
+                font-weight: 600;
+            }
+            QTabWidget#MainTabs > QTabBar::tab:hover {
+                background: #e2e8f0;
+                color: #0f172a;
             }
             QSplitter::handle {
                 background: #e2e8f0;
@@ -89,10 +128,10 @@ class MainWindow(QMainWindow):
             QScrollArea {
                 background: transparent;
             }
-            QScrollBar::vertical {
+            QScrollBar:vertical {
                 background: #f1f5f9;
                 width: 8px;
-                border-radius: 4px;    
+                border-radius: 4px;
             }
             QScrollBar::handle:vertical {
                 background: #cbd5e1;
@@ -100,10 +139,10 @@ class MainWindow(QMainWindow):
                 min-height: 20px;
             }
             QScrollBar::handle:vertical:hover {
-                background: #94a3b8;               
+                background: #94a3b8;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0;            
+                height: 0;
             }
         """)
     
@@ -118,6 +157,7 @@ class MainWindow(QMainWindow):
             f"pkt {frame.packet_count:04d}"
             f"alt = {frame.altitude:.1f}m"
             f"vel = {frame.velocity:.1f}m/s"
+            f"pres = {frame.pressure_pa:.0f}Pa"
             f"rssi = {frame.signal:.1f}dBm"
         )
     
@@ -126,5 +166,6 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self._source.disconnect()
+        self._terminal.closeEvent(event)
         self._log.log_info("Disconnecting - goodbye")
         super().closeEvent(event)
