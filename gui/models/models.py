@@ -1,10 +1,12 @@
 """
-This file is used to define data we may use.
+@File:   models.py
+@Brief:  Data variables are established here
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
 
-dataclasses creates simple data-holding classes without us having to make them.
-datatime is sued to record exactly when a packet is received and more.
-enum is used to create fixed named options
-typing lets vales refereence specific data types or None
+Description:
+    Data types, variables, and classes are established here.
+    Sort of placeholders until real or mock data can replace them in. 
 """
 
 from dataclasses import dataclass
@@ -13,30 +15,37 @@ from enum import Enum, auto
 from typing import Optional
 
 
+""" Connection State """
+# Constant values tied to ConnectionState class
 class ConnectionState(Enum):
     Disconnected = auto()
     Connecting = auto()
     Connected = auto()
     Error = auto()
 
+""" SDR Configuration """
+# Constant values tied to SDRConfig class
 @dataclass
 class SDRConfig:
-    device: str = "rtlsdr"
-    sample_rate_hz: int =  2_048_000
-    center_freq_hz: int =  433_920_000
-    gain_db: float =  30.0
-    output_path: str = "output/frame.bin"
-    verbose: bool = False
+    device: str = "rtlsdr"                # SDR device being used
+    sample_rate_hz: int =  2_048_000      # Samples per second (2.048 MSPS [Mega Samples Per Second])
+    center_freq_hz: int =  433_920_000    # Center frequency (433.92 MHz)
+    gain_db: float =  30.0                # Decibels recevied 
+    output_path: str = "output/frame.bin" # Where pipeline saves raw data
+    verbose: bool = False                 # Whether to print eztra debug info
 
     @property
+    # Helper property, converts MPSP to MHz for display
     def sample_rate_mhz(self):
         return self.sample_rate_hz / 1_000_000
     
     @property
+    #Helper property, converts Hz to MHz for displays
     def center_freq_mhz(self):
         return self.center_freq_hz / 1_000_000
     
-
+""" Telelemtry Frame """
+# Constant values tied to TelelmtryFrame class
 @dataclass
 class TelemetryFrame:
     timestamp: datetime = None
@@ -56,6 +65,8 @@ class TelemetryFrame:
         if self.timestamp is None:
             self.timestamp = datetime.now()
 
+""" System Status """
+# Constant values tied to SystemStatus class
 @dataclass
 class SystemStatus:
     connection_state: ConnectionState = ConnectionState.Disconnected

@@ -1,3 +1,13 @@
+"""
+@File:   log_panel.py
+@Brief:  a
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
+
+Description:
+    a
+"""
+
 from datetime import datetime
 from enum import Enum, auto
 

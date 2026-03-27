@@ -1,3 +1,13 @@
+"""
+@File:   main_window.py
+@Brief:  
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
+
+Description:
+    i
+"""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QMainWindow,

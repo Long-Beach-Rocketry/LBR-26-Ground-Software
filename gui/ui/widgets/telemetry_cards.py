@@ -1,3 +1,13 @@
+"""
+@File:   telemtry_cards.py
+@Brief:  a
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
+
+Description:
+    a
+"""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,

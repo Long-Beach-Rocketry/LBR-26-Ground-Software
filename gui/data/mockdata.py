@@ -1,9 +1,19 @@
+"""
+@File:   mockdata.py
+@Brief:  Subclass of data.py, holds fake data
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
+
+Description:
+    Fake data source used for testing the GUI until real data is ready for testing.
+"""
+
 from datetime import datetime
 from PySide6.QtCore import QTimer
 from data.data import DataSource
 from models.models import ConnectionState, SDRConfig, SystemStatus, TelemetryFrame
 
-
+# Fake SDR Configurations, used to simulate a real radio device
 Mock_SDR_Config = SDRConfig(
     device = "rtlsdr",
     sample_rate_hz = 2_048_000,
@@ -13,7 +23,7 @@ Mock_SDR_Config = SDRConfig(
     verbose = False,
 )
 
-
+# Predefined telemetry frames, used to simulate mock data
 Mock_Frames = [
     TelemetryFrame (
         altitude = 0.0,
@@ -76,9 +86,9 @@ class MockDataSource(DataSource):
     def __init__(self, interval_ms = 1000):
         super().__init__()
 
-        self.interval_ms = interval_ms
-        self.frame_index = 0
-        self.latest_frame = None
+        self.interval_ms = interval_ms # Miliseconds
+        self.frame_index = 0           # Frame index to cycle through frames
+        self.latest_frame = None       # Current frame
 
         self.status = SystemStatus(
             connection_state = ConnectionState.Disconnected,
@@ -88,22 +98,27 @@ class MockDataSource(DataSource):
         self.timer = QTimer()
         self.timer.timeout.connect(self._tick)
 
+    # Function: Starts the data source (connection, status, timer)
     def connect(self):
         self.status.connection_state = ConnectionState.Connected
         self._emit_status(self.status)
         self.timer.start(self.interval_ms)
 
+    # Function: Stops timer, connection, updates status
     def disconnect(self):
         self.timer.stop()
         self.status.connection_state = ConnectionState.Disconnected
         self._emit_status(self.status)
 
+    # Function: Returns most recent telemetry frame
     def get_latest_frame(self):
         return self.latest_frame
     
+    # Function: Returns current connection status
     def get_status(self):
         return self.status
     
+    # Function: Generates and updates new telelemtry frame based on given data
     def _tick(self):
         template = Mock_Frames[self.frame_index % len(Mock_Frames)]
 

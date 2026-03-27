@@ -1,3 +1,13 @@
+"""
+@File:   status_bar.py
+@Brief:  a
+@Author: Mario Cruz
+@Orgin:  Long Beach Rocketry
+
+Description:
+    a
+"""
+
 from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
