@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "connector-message.schema.json",
+  "title": "LoRa Connector Message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "sequence",
+    "timestamp_ms",
+    "source",
+    "payload_b64"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "message_type": {
+      "type": "string",
+      "const": "telemetry_frame"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "string",
+      "enum": ["sx1262", "sx127", "simulated"]
+    },
+    "payload_b64": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checksum_hex": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]+$"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

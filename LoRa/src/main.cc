@@ -17,10 +17,22 @@
 */
 
 #include "cli/config.h"
+#include "periph/sx1262_module.h"
+#include "periph/sx127_module.h"
 #include "sdr_pipeline.h"
 
 #include <exception>
 #include <iostream>
+#include <memory>
+
+namespace {
+    std::unique_ptr<periph::ILoRaModule> create_lora_module(const std::string &module_name) {
+        if (module_name == "sx127")
+            return std::make_unique<periph::SX127Module>();
+
+        return std::make_unique<periph::SX1262Module>();
+    }
+}
 
 /**
  * @brief Main entry point for the SDR RF-to-binary processing pipeline
@@ -48,7 +60,9 @@ int main(int argc, char * const argv[]) {
             break;
     }
 
-    SDRPipeline pipeline(config.settings());
+    std::unique_ptr<periph::ILoRaModule> lora_module =
+        create_lora_module(config.settings().lora.module);
+    SDRPipeline pipeline(config.settings(), lora_module.get());
 
     try {
         pipeline.run();

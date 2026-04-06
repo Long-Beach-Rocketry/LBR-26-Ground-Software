@@ -25,9 +25,14 @@ namespace cli {
         std::string output_path = "output/frame.bin";
     };
 
+    struct LoRaSettings {
+        std::string module = "sx1262";
+    };
+
     struct RuntimeSettings {
         SdrSettings sdr;
         PipelineSettings pipeline;
+        LoRaSettings lora;
     };
 
     enum class ParseStatus {

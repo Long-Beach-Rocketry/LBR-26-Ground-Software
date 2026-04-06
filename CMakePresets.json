@@ -1,0 +1,40 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-ucrt-ninja",
+      "displayName": "Windows UCRT64 + Ninja",
+      "description": "Configure with MSYS2 UCRT64 GCC and Ninja, with PATH adjusted for compiler runtime tools.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/g++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "environment": {
+        "PATH": "C:/msys64/ucrt64/bin;$penv{PATH}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-ucrt-ninja",
+      "configurePreset": "windows-ucrt-ninja"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-ucrt-ninja",
+      "configurePreset": "windows-ucrt-ninja",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

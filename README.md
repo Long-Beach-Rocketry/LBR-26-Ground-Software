@@ -2,6 +2,8 @@
 
 Ground software scaffold for the Long Beach Rocketry SDR station.
 
+Core implementation now lives under `LoRa/`.
+
 ## Documentation
 
 - Overview: `docs/README.md`
@@ -9,6 +11,7 @@ Ground software scaffold for the Long Beach Rocketry SDR station.
 - Configuration format: `docs/configuration.md`
 - Architecture: `docs/architecture.md`
 - Tests and coverage: `docs/build-and-run.md`
+- LoRa module details: `LoRa/README.md`
 
 ## CI/CD
 
@@ -28,4 +31,10 @@ $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
 cmake -S . -B build -G Ninja -DCMAKE_MAKE_PROGRAM=C:\msys64\ucrt64\bin\ninja.exe -DCMAKE_CXX_COMPILER=C:\msys64\ucrt64\bin\g++.exe -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 .\build\lbr_ground.exe -c .\config.demo.yaml -v
+```
+
+For the current layout, prefer:
+
+```powershell
+.\build\LoRa\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
 ```

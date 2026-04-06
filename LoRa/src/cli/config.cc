@@ -29,6 +29,10 @@ namespace {
             return false;
         }
     }
+
+    bool is_supported_lora_module(const std::string &module_name) {
+        return module_name == "sx1262" || module_name == "sx127";
+    }
 }
 
 cli::ParseStatus cli::Config::parse(const Args &args) {
@@ -60,6 +64,22 @@ cli::ParseStatus cli::Config::parse(const Args &args) {
             continue;
         }
 
+        if (arg == "-m" || arg == "--lora-module") {
+            if (i + 1 >= args.size()) {
+                std::cerr << "Missing value for option: " << arg << '\n';
+                usage(args.program_name());
+                return ParseStatus::ExitFailure;
+            }
+
+            _settings.lora.module = std::string(args.at(++i));
+            if (!is_supported_lora_module(_settings.lora.module)) {
+                std::cerr << "Unsupported LoRa module: " << _settings.lora.module << '\n';
+                usage(args.program_name());
+                return ParseStatus::ExitFailure;
+            }
+            continue;
+        }
+
         std::cerr << "Unknown option: " << arg << '\n';
         usage(args.program_name());
         return ParseStatus::ExitFailure;
@@ -85,6 +105,7 @@ void cli::Config::usage(std::string_view program_name) const {
               << "Options:\n"
               << "  -h, --help            Show this help message and exit\n"
               << "  -c, --config <file>   Path to configuration file\n"
+              << "  -m, --lora-module <name>  LoRa module (sx1262 or sx127)\n"
               << "  -v, --verbose         Enable verbose output" << std::endl;
 }
 
@@ -142,6 +163,17 @@ bool cli::Config::parse_config_file(std::string &error_message) {
                 return false;
         }
 
+            const YAML::Node lora_node = root["lora"];
+            if (lora_node) {
+                if (!lora_node.IsMap()) {
+                    error_message = "Node 'lora' must be a map.";
+                    return false;
+                }
+
+                if (!parse_optional_value(lora_node, "module", _settings.lora.module, error_message))
+                    return false;
+            }
+
         if (_settings.sdr.sample_rate_hz <= 0) {
             error_message = "sdr.sample_rate_hz must be > 0.";
             return false;
@@ -152,6 +184,10 @@ bool cli::Config::parse_config_file(std::string &error_message) {
         }
         if (_settings.pipeline.output_path.empty()) {
             error_message = "pipeline.output_path must not be empty.";
+            return false;
+        }
+        if (!is_supported_lora_module(_settings.lora.module)) {
+            error_message = "lora.module must be one of: sx1262, sx127.";
             return false;
         }
     } catch (const YAML::BadFile &e) {
