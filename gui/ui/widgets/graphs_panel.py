@@ -9,6 +9,8 @@ Description:
     Scrolling feature for these charts is also created here.
 """
 
+# make sure graphs can rescale if data enlengths 
+
 from collections import deque
 
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
@@ -44,10 +46,10 @@ def make_chart(title, y_label, color_hex):
     chart.setBackgroundBrush(QColor("#ffffff"))
     chart.setTitleBrush(QColor("#0f172a"))
 
-    title_front = chart.titleFont()
-    title_front.setPointSize(14)
-    title_front.setBold(True)
-    chart.setTitleFont(title_front)
+    title_font = chart.titleFont()
+    title_font.setPointSize(14)
+    title_font.setBold(True)
+    chart.setTitleFont(title_font)
 
     x_axis = QValueAxis()
     x_axis.setTitleText("Time (s)")
@@ -76,6 +78,15 @@ class GraphsPanel(QWidget):
         self._vel_data = deque(maxlen = graph_limit)
         self._accel_data = deque(maxlen = graph_limit)
         self._rssi_data = deque(maxlen = graph_limit)
+
+        self._alt_ymin = [float('inf')]
+        self._alt_ymax = [float('-inf')]
+        self._vel_ymin = [float('inf')]
+        self._vel_ymax = [float('-inf')]
+        self._accel_ymin = [float('inf')]
+        self._accel_ymax = [float('-inf')]
+        self._rssi_ymin = [float('inf')]
+        self._rssi_ymax = [float('-inf')]
 
         self._current_index = 0
         self._chart_count = 4
@@ -157,7 +168,7 @@ class GraphsPanel(QWidget):
         dot_bar.setFixedHeight(32)
         dot_layout = QHBoxLayout(dot_bar)
         dot_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dot_layout.setSpacing(0)
+        dot_layout.setSpacing(8)
         self._dots = []
 
         for _ in self._charts:
@@ -271,23 +282,27 @@ class GraphsPanel(QWidget):
 
         self._scroll_area.horizontalScrollBar().setValue(self._current_index * chart_width)
 
-    def _update_series(self, series, y_axis, data_deque):
+    def _update_series(self, series, y_axis, data_deque, y_min_tracker, y_max_tracker):
         series.clear()
         for x, y in enumerate(data_deque):
             series.append(x, y)
 
         if data_deque:
-            min_val = min(data_deque)
-            max_val = max(data_deque)
-            margin = max(abs(max_val - min_val) * 0.1, 1.0)
-            y_axis.setRange(min_val - margin, max_val + margin)
+            y_min_tracker[0] = min(y_min_tracker[0], min(data_deque))
+            y_max_tracker[0] = max(y_max_tracker[0], max(data_deque))
+            margin = max(abs(y_max_tracker[0] - y_min_tracker[0]) * 0.1, 1.0)
+            y_axis.setRange(y_min_tracker[0] - margin, y_max_tracker[0] + margin)
 
     def update_frame(self, frame: TelemetryFrame):
         self._alt_data.append(frame.altitude)
         self._vel_data.append(frame.velocity)
         self._accel_data.append(frame.acceleration)
         self._rssi_data.append(frame.signal)
- 
-        for _, _, series, y_axis, data in self._charts:
-            self._update_series(series, y_axis, data)
- 
+
+        self._update_series(self._alt_series, self._alt_yaxis, self._alt_data, self._alt_ymin, self._alt_ymax)
+        self._update_series(self._vel_series, self._vel_yaxis, self._vel_data, self._vel_ymin, self._vel_ymax)
+        self._update_series(self._accel_series, self._accel_yaxis, self._accel_data, self._accel_ymin, self._accel_ymax)
+        self._update_series(self._rssi_series, self._rssi_yaxis, self._rssi_data, self._rssi_ymin, self._rssi_ymax)
+
+        for _, chart, _, _, data in self._charts:
+            self._update_series(chart.series()[0], chart.axes(Qt.Orientation.Vertical)[0], data, [float('inf')], [float('-inf')])

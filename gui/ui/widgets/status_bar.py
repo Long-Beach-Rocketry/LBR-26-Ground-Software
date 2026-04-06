@@ -153,7 +153,7 @@ class StatusBar(QFrame):
             color = "#94a3b8"
         
         self._state_label.setStyleSheet(
-            f"font-weight: bold; font-size: 11px; color: {color}; latter-spacing: 1px;"
+            f"font-weight: bold; font-size: 11px; color: {color}; letter-spacing: 1px;"
         )
 
         if status.sdr_config is not None:

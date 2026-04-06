@@ -1,11 +1,12 @@
 """
 @File:   main_window.py
-@Brief:  
+@Brief:  Main Window of the GUI
 @Author: Mario Cruz
 @Orgin:  Long Beach Rocketry
 
 Description:
-    i
+    MainWindow is the core of the GUI, contains all widgets and handles
+    data flow. MainWindow receives telemetry frames and connection statsus updates.
 """
 
 from PySide6.QtCore import Qt
@@ -162,6 +163,7 @@ class MainWindow(QMainWindow):
 
     def _on_new_frame(self, frame: TelemetryFrame):
         self._cards.update_frame(frame)
+        self._graphs.update_frame(frame)
 
         self._log.log_debug(
             f"pkt {frame.packet_count:04d}"
