@@ -1,40 +1,138 @@
-# LBR-26-Ground-Software
+# LoRa Ground Software
 
-Ground software scaffold for the Long Beach Rocketry SDR station.
+Ground software skeleton for the Long Beach Rocketry station, organized under the LoRa root.
 
-Core implementation now lives under `LoRa/`.
+## What This Update Adds
 
-## Documentation
+- A hardware abstraction interface: `periph::ILoRaModule`
+- Two interchangeable backend skeletons:
+  - `periph::SX1262Module`
+  - `periph::SX127Module`
+- `SDRPipeline` now depends on the LoRa abstraction instead of concrete hardware
+- CLI/config support to choose LoRa module at runtime (`sx1262` or `sx127`)
 
-- Overview: `docs/README.md`
-- Build and run: `docs/build-and-run.md`
-- Configuration format: `docs/configuration.md`
-- Architecture: `docs/architecture.md`
-- Tests and coverage: `docs/build-and-run.md`
-- LoRa module details: `LoRa/README.md`
+## Why The Abstraction Helps
 
-## CI/CD
+The pipeline now consumes telemetry through `ILoRaModule`:
 
-GitHub Actions workflow:
-- `.github/workflows/ci.yml`
+- `init()`
+- `transmit(uint8_t* buf, size_t len)`
+- `receive(uint8_t* buf)`
 
-It runs:
-- build + tests (`ctest`) on pushes and pull requests
-- coverage generation (`gcovr`) with artifacts:
-  - `coverage.xml`
-  - `coverage.html`
+Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
 
-## Quick Start
+## Folder Layout
 
-```powershell
-$env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
-cmake -S . -B build -G Ninja -DCMAKE_MAKE_PROGRAM=C:\msys64\ucrt64\bin\ninja.exe -DCMAKE_CXX_COMPILER=C:\msys64\ucrt64\bin\g++.exe -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-.\build\lbr_ground.exe -c .\config.demo.yaml -v
+```text
+LoRa/
+  include/
+    cli/
+      args.h
+      config.h
+    periph/
+      i_lora_module.h
+      sx1262_module.h
+      sx127_module.h
+    sdr_pipeline.h
+  src/
+    cli/
+      args.cc
+      config.cc
+    periph/
+      sx1262_module.cc
+      sx127_module.cc
+    main.cc
+    sdr_pipeline.cc
+  tests/
+    args_tests.cc
+    config_tests.cc
+    pipeline_tests.cc
+  config.demo.yaml
+  CMakeLists.txt
 ```
 
-For the current layout, prefer:
+## Module Selection
+
+Choose LoRa backend with either:
+
+- CLI: `--lora-module sx1262` or `--lora-module sx127`
+- YAML:
+
+```yaml
+lora:
+  module: "sx1262"
+```
+
+The CLI option overrides defaults and is validated.
+
+## Build And Run
+
+From repository root:
 
 ```powershell
-.\build\LoRa\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
+
+Run app:
+
+```powershell
+.\build\lbr_ground.exe --help
+.\build\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
+.\build\lbr_ground.exe --lora-module sx127 -v
+```
+
+## Coverage
+
+Current score (last run):
+
+- Project source aggregate: line 86.65%, functions 100.00%, branches 53.13%
+
+Project source metrics (all production .cc files):
+
+| File | Line | Functions | Branches |
+| --- | ---: | ---: | ---: |
+| args.cc | 90.91% | 100.00% | 78.57% |
+| config.cc | 100.00% | 100.00% | 65.13% |
+| message.cc | 78.98% | 100.00% | 46.05% |
+| ndjson_file.cc | 93.75% | 100.00% | 53.85% |
+| local_tcp_transport.cc | 78.72% | 100.00% | 42.45% |
+| sx1262_module.cc | 100.00% | 100.00% | 0.00% |
+| sx127_module.cc | 100.00% | 100.00% | 0.00% |
+| sdr_pipeline.cc | 100.00% | 100.00% | 71.43% |
+| main.cc | 89.47% | 100.00% | 43.33% |
+| Project aggregate | 86.65% | 100.00% | 53.13% |
+
+Generate coverage from repository root:
+
+```powershell
+cmake --build build-coverage --target coverage
+```
+
+Coverage artifacts are written to:
+
+- [build-coverage/coverage](../build-coverage/coverage)
+
+Main project source reports are available in:
+
+- [build-coverage/coverage/args.cc.gcov](../build-coverage/coverage/args.cc.gcov)
+- [build-coverage/coverage/config.cc.gcov](../build-coverage/coverage/config.cc.gcov)
+- [build-coverage/coverage/sdr_pipeline.cc.gcov](../build-coverage/coverage/sdr_pipeline.cc.gcov)
+- [build-coverage/coverage/main.cc.gcov](../build-coverage/coverage/main.cc.gcov)
+
+## Current Backend State
+
+`SX1262Module` and `SX127Module` are intentionally skeletal backends. They compile and integrate with the pipeline contract but still need hardware-specific SPI/GPIO/radio register logic for production telemetry.
+
+## Connector
+
+The connector contract used between the LoRa side and the consumer side is documented in [docs/connector.md](docs/connector.md).
+
+The implementation lives under [include/connector](include/connector) and [src/connector](src/connector).
+
+Short version:
+
+- Preferred transport: local socket for live data exchange.
+- Fallback transport: file-based replay for offline testing and debugging.
+- The transport layer is intentionally separate from the LoRa module abstraction so the other team can implement it without changing the pipeline contract.
