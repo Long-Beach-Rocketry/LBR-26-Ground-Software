@@ -43,6 +43,12 @@ TEST(ConfigTests, All) {
     }
 
     {
+        tests::ArgvBuilder builder({"app.exe", "-m"});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
         tests::ArgvBuilder builder({"app.exe", "-v"});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::Ok);
@@ -56,6 +62,8 @@ TEST(ConfigTests, All) {
             "  sample_rate_hz: 1000000\n"
             "  center_freq_hz: 915000000\n"
             "  gain_db: 12\n"
+            "lora:\n"
+            "  module: \"sx127\"\n"
             "pipeline:\n"
             "  verbose: false\n"
             "  output_path: \"telemetry.bin\"\n");
@@ -68,8 +76,22 @@ TEST(ConfigTests, All) {
         EXPECT_EQ(config.settings().sdr.sample_rate_hz, 1000000);
         EXPECT_EQ(config.settings().sdr.center_freq_hz, 915000000);
         EXPECT_EQ(config.settings().sdr.gain_db, 12);
+        EXPECT_EQ(config.settings().lora.module, std::string("sx127"));
         EXPECT_EQ(config.settings().pipeline.output_path, std::string("telemetry.bin"));
         EXPECT_FALSE(config.settings().pipeline.verbose);
+    }
+
+    {
+        tests::ArgvBuilder builder({"app.exe", "--lora-module", "sx127"});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::Ok);
+        EXPECT_EQ(config.settings().lora.module, std::string("sx127"));
+    }
+
+    {
+        tests::ArgvBuilder builder({"app.exe", "--lora-module", "bad"});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
     }
 
     {
@@ -111,6 +133,76 @@ TEST(ConfigTests, All) {
     }
 
     {
+        tests::ScopedTempFile file("sdr:\n  center_freq_hz: [915000000]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("sdr:\n  device: [rtlsdr]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("sdr:\n  gain_db: [30]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("sdr: 12\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("pipeline: 12\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("pipeline:\n  output_path: [out.bin]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("pipeline:\n  verbose: [true]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("lora: 12\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("lora:\n  module: [sx1262]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("sdr:\n  center_freq_hz: 0\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
         tests::ScopedTempFile file("sdr:\n  sample_rate_hz: -1\n");
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
         cli::Config config;
@@ -119,6 +211,13 @@ TEST(ConfigTests, All) {
 
     {
         tests::ScopedTempFile file("pipeline:\n  output_path: \"\"\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("lora:\n  module: \"invalid\"\n");
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);

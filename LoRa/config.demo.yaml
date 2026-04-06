@@ -6,6 +6,9 @@ sdr:
   center_freq_hz: 433920000
   gain_db: 30
 
+lora:
+  module: "sx1262"
+
 pipeline:
   verbose: true
   output_path: "output/frame.bin"

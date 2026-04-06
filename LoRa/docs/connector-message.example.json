@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "message_type": "telemetry_frame",
+  "sequence": 42,
+  "timestamp_ms": 1712345678901,
+  "source": "sx1262",
+  "payload_b64": "AQIDBA==",
+  "checksum_hex": "4A1F9C2B"
+}
