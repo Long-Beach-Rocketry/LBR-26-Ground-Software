@@ -55,7 +55,7 @@ class SerialReader(QObject):
                     self.data_received.emit(text)
             except Exception as e:
                 if self._running:
-                    self.error_occurred.emit(str(e))
+                    self.error_ocurred.emit(str(e))
                 break
     
     def stop(self):

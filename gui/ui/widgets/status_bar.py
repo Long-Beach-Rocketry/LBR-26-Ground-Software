@@ -8,20 +8,22 @@ Description:
     a
 """
 
-from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt, Signal
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from models.models import ConnectionState, SystemStatus
 
 class HeartbeatDot(QWidget):
+    opacity_changed = Signal()
+
     def __init__(self, parent = None):
+
         super().__init__(parent)
 
         self.setFixedSize(14, 14)
 
         self._color = QColor("#9ca3af")
-
         self._opacity = 1.0
 
         self._animation = QPropertyAnimation(self, b"dot_opacity")
@@ -37,9 +39,10 @@ class HeartbeatDot(QWidget):
     
     def _set_opacity(self, value):
         self._opacity = value
+        self.opacity_changed.emit()
         self.update()
 
-    dot_opacity = Property(float, _get_opacity, _set_opacity)
+    dot_opacity = Property(float, _get_opacity, _set_opacity, notify = opacity_changed)
 
     def set_connected(self, connected):
         if connected:
@@ -59,7 +62,8 @@ class HeartbeatDot(QWidget):
         painter.setBrush(self._color)
         margin = 2
         painter.drawEllipse(
-            margin, margin,
+            margin,
+            margin,
             self.width() - margin * 2,
             self.height() - margin * 2,
         )
@@ -142,7 +146,6 @@ class StatusBar(QFrame):
         connected = (status.connection_state == ConnectionState.Connected)
 
         self._dot.set_connected(connected)
-
         self._state_label.setText(status.connection_state.name)
 
         if connected:
@@ -164,4 +167,3 @@ class StatusBar(QFrame):
         
         self._packets_label.setText(f"Packets: {status.packets_received}")
         self._uptime_label.setText(f"Uptime: {int(status.uptime_seconds)}s")
-

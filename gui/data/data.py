@@ -31,6 +31,9 @@ class DataSource(ABC):
     def on_status_change(self, callback):
         self._status_callback = callback
 
+    def on_packet(self, callback):
+        self._packet_callback = callback
+
     """ Abstract methods (completed in subclasses [mock / read data]) """
     # Function: Starts the data source (connection, status, timer)
     @abstractmethod
@@ -62,3 +65,7 @@ class DataSource(ABC):
     def _emit_status(self, status: SystemStatus):
         if self._status_callback is not None:
             self._status_callback(status)
+
+    def _emit_packet(self, packet: bytes):
+        if self._packet_callback is not None:
+            self._packet_callback(packet)

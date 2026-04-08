@@ -16,7 +16,7 @@ from typing import Optional
 
 
 """ Connection State """
-# Constant values tied to ConnectionState class
+# Variables tied to ConnectionState class
 class ConnectionState(Enum):
     Disconnected = auto()
     Connecting = auto()
@@ -24,7 +24,7 @@ class ConnectionState(Enum):
     Error = auto()
 
 """ SDR Configuration """
-# Constant values tied to SDRConfig class
+# Variables tied to SDRConfig class
 @dataclass
 class SDRConfig:
     device: str = "rtlsdr"                # SDR device being used

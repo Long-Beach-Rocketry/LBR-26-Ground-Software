@@ -27,6 +27,7 @@ from ui.widgets.status_bar import StatusBar
 from ui.widgets.telemetry_cards import TelemetryCardsPanel
 from ui.widgets.graphs_panel import GraphsPanel
 from ui.widgets.terminal_panel import TerminalPanel
+from ui.widgets.packet_viewer import PacketViewerPanel
 
 class MainWindow(QMainWindow):
     def __init__(self, datasource: DataSource):
@@ -94,6 +95,9 @@ class MainWindow(QMainWindow):
         self._terminal = TerminalPanel()
         self._tabs.addTab(self._terminal, "💻  Terminal")
  
+        self._packet_viewer = PacketViewerPanel()
+        self._tabs.addTab(self._packet_viewer, "📦  Packets")
+
         splitter.addWidget(self._tabs)
 
         self._log = LogPanel()
