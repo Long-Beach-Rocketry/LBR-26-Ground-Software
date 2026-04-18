@@ -74,3 +74,65 @@ jobs:
           path: |
             build-coverage/coverage.xml
             build-coverage/coverage.html
+
+  feature-options:
+    name: Feature Options (ZeroMQ + Protobuf)
+    runs-on: ubuntu-latest
+    needs: tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools and optional deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libzmq3-dev protobuf-compiler python3-pip
+          python3 -m pip install --user nanopb
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure with optional features
+        run: cmake -S . -B build-features -G Ninja -DCMAKE_BUILD_TYPE=Release -DLBR_ENABLE_ZEROMQ=ON -DLBR_ENABLE_PROTOBUF_CODEGEN=ON
+
+      - name: Build tests with optional features
+        run: cmake --build build-features -j --target lbr_tests
+
+      - name: Generate protobuf code
+        run: cmake --build build-features --target connector_proto_codegen
+
+      - name: Generate nanopb code
+        run: cmake --build build-features --target connector_nanopb_codegen
+
+      - name: Run ZeroMQ connector test
+        run: ctest --test-dir build-features -R ConnectorTests.LocalZmqTransportPubSubExchange --output-on-failure
+
+  windows-smoke:
+    name: Windows UCRT Smoke
+    runs-on: windows-latest
+    needs: tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-cmake
+
+      - name: Configure
+        shell: powershell
+        run: cmake --preset windows-ucrt-ninja
+
+      - name: Build
+        shell: powershell
+        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests
+
+      - name: Test
+        shell: powershell
+        run: ctest --preset windows-ucrt-ninja
