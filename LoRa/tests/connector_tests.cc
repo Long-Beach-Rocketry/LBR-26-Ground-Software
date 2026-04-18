@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 
 #include "connector/local_tcp_transport.h"
+#include "connector/local_udp_transport.h"
+#include "connector/local_zmq_transport.h"
 #include "connector/message.h"
 #include "connector/ndjson_file.h"
 
@@ -30,7 +32,7 @@ TEST(ConnectorTests, MessageRoundTripJson) {
     message.message_type = "telemetry_frame";
     message.sequence = 7;
     message.timestamp_ms = 1234567890;
-    message.source = connector::Source::Sx1262;
+    message.source = "sx1262";
     message.payload = {0x01, 0x02, 0x03, 0x04};
     message.checksum_hex = "AB12";
     message.metadata["frame_type"] = "telemetry";
@@ -42,7 +44,7 @@ TEST(ConnectorTests, MessageRoundTripJson) {
     EXPECT_EQ(parsed.message_type, "telemetry_frame");
     EXPECT_EQ(parsed.sequence, 7u);
     EXPECT_EQ(parsed.timestamp_ms, 1234567890);
-    EXPECT_EQ(parsed.source, connector::Source::Sx1262);
+    EXPECT_EQ(parsed.source, std::string("sx1262"));
     EXPECT_EQ(parsed.payload, message.payload);
     EXPECT_TRUE(parsed.checksum_hex.has_value());
     EXPECT_EQ(*parsed.checksum_hex, "AB12");
@@ -67,20 +69,20 @@ TEST(ConnectorTests, MessageRoundTripWithoutOptionalFields) {
     connector::ConnectorMessage message;
     message.sequence = 12;
     message.timestamp_ms = 333;
-    message.source = connector::Source::Sx127;
+    message.source = "sx127";
     message.payload = {0x10};
 
     const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(message.to_json());
     EXPECT_EQ(parsed.sequence, 12u);
     EXPECT_EQ(parsed.timestamp_ms, 333);
-    EXPECT_EQ(parsed.source, connector::Source::Sx127);
+    EXPECT_EQ(parsed.source, std::string("sx127"));
     EXPECT_FALSE(parsed.checksum_hex.has_value());
     EXPECT_TRUE(parsed.metadata.empty());
 }
 
 TEST(ConnectorTests, MessageToJsonRejectsUnsupportedSchemaVersion) {
     connector::ConnectorMessage message;
-    message.schema_version = 2;
+    message.schema_version = 0;
     message.payload = {0x01};
 
     EXPECT_THROW(static_cast<void>(message.to_json()), std::runtime_error);
@@ -88,7 +90,7 @@ TEST(ConnectorTests, MessageToJsonRejectsUnsupportedSchemaVersion) {
 
 TEST(ConnectorTests, MessageToJsonRejectsUnsupportedMessageType) {
     connector::ConnectorMessage message;
-    message.message_type = "status";
+    message.message_type.clear();
     message.payload = {0x01};
 
     EXPECT_THROW(static_cast<void>(message.to_json()), std::runtime_error);
@@ -108,9 +110,30 @@ TEST(ConnectorTests, MessageFromJsonRejectsInvalidBase64) {
                  std::runtime_error);
 }
 
-TEST(ConnectorTests, MessageFromJsonRejectsUnknownSource) {
+TEST(ConnectorTests, MessageFromJsonAllowsCustomSource) {
+    const std::string custom_source =
+        R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"vehicle.alpha","payload_b64":"AQ=="})";
+    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(custom_source);
+    EXPECT_EQ(parsed.source, std::string("vehicle.alpha"));
+}
+
+TEST(ConnectorTests, MessageFromJsonRejectsSchemaVersionZero) {
+    const std::string invalid_schema =
+        R"({"schema_version":0,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"simulated","payload_b64":"AQ=="})";
+    EXPECT_THROW(static_cast<void>(connector::ConnectorMessage::from_json(invalid_schema)),
+                 std::runtime_error);
+}
+
+TEST(ConnectorTests, MessageFromJsonRejectsEmptyMessageType) {
+    const std::string invalid_type =
+        R"({"schema_version":1,"message_type":"","sequence":1,"timestamp_ms":1,"source":"simulated","payload_b64":"AQ=="})";
+    EXPECT_THROW(static_cast<void>(connector::ConnectorMessage::from_json(invalid_type)),
+                 std::runtime_error);
+}
+
+TEST(ConnectorTests, MessageFromJsonRejectsEmptySource) {
     const std::string invalid_source =
-        R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"x","payload_b64":"AQ=="})";
+        R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"","payload_b64":"AQ=="})";
     EXPECT_THROW(static_cast<void>(connector::ConnectorMessage::from_json(invalid_source)),
                  std::runtime_error);
 }
@@ -168,7 +191,7 @@ TEST(ConnectorTests, MessageRoundTripWithEscapedPayloadMetadataStrings) {
     connector::ConnectorMessage message;
     message.sequence = 88;
     message.timestamp_ms = 777;
-    message.source = connector::Source::Simulated;
+    message.source = "simulated";
     message.payload = {0x00, 0x0A, 0x1F};
     message.metadata["path"] = "C:\\tmp\\file";
     message.metadata["quote"] = "\"quoted\"";
@@ -185,7 +208,7 @@ TEST(ConnectorTests, MessageToJsonEscapesControlCharacters) {
     connector::ConnectorMessage message;
     message.sequence = 1;
     message.timestamp_ms = 2;
-    message.source = connector::Source::Simulated;
+    message.source = "simulated";
     message.payload = {0x01};
     message.metadata["ctrl"] = std::string("a") + '\b' + '\f' + '\n' + '\r' + '\t' + '"' + '\\' + static_cast<char>(0x01);
 
@@ -208,6 +231,23 @@ TEST(ConnectorTests, MessageFromJsonAcceptsWhitespaceInBase64Payload) {
     EXPECT_EQ(parsed.payload[0], 0x01);
 }
 
+TEST(ConnectorTests, MessageRoundTripCustomProtocolEnvelope) {
+    connector::ConnectorMessage message;
+    message.schema_version = 3;
+    message.message_type = "telemetry_decoded";
+    message.sequence = 999;
+    message.timestamp_ms = 123;
+    message.source = "decoder.flight-v2";
+    message.payload = {0x41, 0x42};
+    message.metadata["protocol"] = "lbr.flight.v2";
+
+    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(message.to_json());
+    EXPECT_EQ(parsed.schema_version, 3);
+    EXPECT_EQ(parsed.message_type, std::string("telemetry_decoded"));
+    EXPECT_EQ(parsed.source, std::string("decoder.flight-v2"));
+    EXPECT_EQ(parsed.metadata.at("protocol"), std::string("lbr.flight.v2"));
+}
+
 TEST(ConnectorTests, NdjsonFileRoundTrip) {
     const std::filesystem::path file_path = temp_file_path("lbr_connector_roundtrip.ndjson");
     std::filesystem::remove(file_path);
@@ -215,7 +255,7 @@ TEST(ConnectorTests, NdjsonFileRoundTrip) {
     connector::ConnectorMessage message;
     message.sequence = 99;
     message.timestamp_ms = 1111;
-    message.source = connector::Source::Simulated;
+    message.source = "simulated";
     message.payload = {0xAA, 0xBB, 0xCC};
 
     {
@@ -229,7 +269,7 @@ TEST(ConnectorTests, NdjsonFileRoundTrip) {
         EXPECT_TRUE(reader.read_next(parsed));
         EXPECT_EQ(parsed.sequence, 99u);
         EXPECT_EQ(parsed.timestamp_ms, 1111);
-        EXPECT_EQ(parsed.source, connector::Source::Simulated);
+        EXPECT_EQ(parsed.source, std::string("simulated"));
         EXPECT_EQ(parsed.payload, message.payload);
     }
 
@@ -309,7 +349,7 @@ TEST(ConnectorTests, LocalTcpTransportExchange) {
                                      "telemetry_frame",
                                      1,
                                      42,
-                                     connector::Source::Simulated,
+                                     "simulated",
                                      {0x11, 0x22},
                                      std::nullopt,
                                      {}}.to_json();
@@ -433,4 +473,113 @@ TEST(ConnectorTests, LocalTcpTransportSupportsEmptyHostAlias) {
 
     server_thread.join();
     EXPECT_EQ(received, "");
+}
+
+TEST(ConnectorTests, LocalUdpTransportExchange) {
+    constexpr std::uint16_t port = 45690;
+    const std::string payload =
+        connector::ConnectorMessage{1,
+                                    "telemetry_frame",
+                                    22,
+                                    123,
+                                    "simulated",
+                                    {0xDE, 0xAD, 0xBE, 0xEF},
+                                    std::nullopt,
+                                    {}}.to_json();
+
+    std::string received;
+
+    std::thread server_thread([&received, port]() {
+        connector::LocalUdpTransport server(connector::LocalUdpMode::Server, "127.0.0.1", port);
+        server.open();
+        ASSERT_TRUE(server.read_datagram(received, 2000));
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    connector::LocalUdpTransport client(connector::LocalUdpMode::Client, "127.0.0.1", port);
+    client.open();
+    client.write_datagram(payload);
+
+    server_thread.join();
+
+    ASSERT_FALSE(received.empty());
+    EXPECT_EQ(connector::ConnectorMessage::from_json(received).sequence, 22u);
+}
+
+TEST(ConnectorTests, LocalUdpTransportReadTimesOutWithoutBlocking) {
+    constexpr std::uint16_t port = 45691;
+
+    connector::LocalUdpTransport server(connector::LocalUdpMode::Server, "127.0.0.1", port);
+    server.open();
+
+    std::string payload;
+    const auto start = std::chrono::steady_clock::now();
+    const bool has_data = server.read_datagram(payload, 100);
+    const auto elapsed_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                               start)
+            .count();
+
+    EXPECT_FALSE(has_data);
+    EXPECT_TRUE(payload.empty());
+    EXPECT_GE(elapsed_ms, 50);
+    EXPECT_LT(elapsed_ms, 1000);
+}
+
+TEST(ConnectorTests, LocalUdpTransportWriteBeforeOpenThrows) {
+    connector::LocalUdpTransport transport(connector::LocalUdpMode::Client, "127.0.0.1", 45692);
+    EXPECT_THROW(transport.write_datagram("hello"), std::runtime_error);
+}
+
+TEST(ConnectorTests, LocalUdpTransportReadBeforeOpenThrows) {
+    connector::LocalUdpTransport transport(connector::LocalUdpMode::Client, "127.0.0.1", 45693);
+    std::string payload;
+    EXPECT_THROW(static_cast<void>(transport.read_datagram(payload, 5)), std::runtime_error);
+}
+
+TEST(ConnectorTests, LocalUdpTransportServerCannotSendBeforeLearningPeer) {
+    connector::LocalUdpTransport server(connector::LocalUdpMode::Server, "127.0.0.1", 45694);
+    server.open();
+    EXPECT_THROW(server.write_datagram("payload"), std::runtime_error);
+}
+
+TEST(ConnectorTests, LocalZmqTransportThrowsWhenNotBuiltWithZmq) {
+#if defined(LBR_HAS_ZEROMQ) && LBR_HAS_ZEROMQ
+    SUCCEED();
+#else
+    connector::LocalZmqTransport publisher(connector::LocalZmqMode::Publisher,
+                                           "tcp://127.0.0.1:5560",
+                                           "telemetry");
+    EXPECT_THROW(static_cast<void>(publisher.open()), std::runtime_error);
+#endif
+}
+
+TEST(ConnectorTests, LocalZmqTransportPubSubExchange) {
+#if defined(LBR_HAS_ZEROMQ) && LBR_HAS_ZEROMQ
+    constexpr const char *endpoint = "tcp://127.0.0.1:5561";
+    constexpr const char *topic = "telemetry";
+    std::string received;
+
+    std::thread subscriber_thread([&received]() {
+        connector::LocalZmqTransport subscriber(connector::LocalZmqMode::Subscriber,
+                                                endpoint,
+                                                topic);
+        subscriber.open();
+        ASSERT_TRUE(subscriber.receive_message(received, 3000));
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    connector::LocalZmqTransport publisher(connector::LocalZmqMode::Publisher,
+                                           endpoint,
+                                           topic);
+    publisher.open();
+    publisher.send_message("payload-via-zmq");
+
+    subscriber_thread.join();
+    EXPECT_EQ(received, "payload-via-zmq");
+#else
+    GTEST_SKIP() << "ZeroMQ not enabled in this build.";
+#endif
 }

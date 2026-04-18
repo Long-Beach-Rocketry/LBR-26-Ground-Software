@@ -7,6 +7,8 @@ The code implementation lives under:
 - [include/connector/message.h](../include/connector/message.h)
 - [include/connector/ndjson_file.h](../include/connector/ndjson_file.h)
 - [include/connector/local_tcp_transport.h](../include/connector/local_tcp_transport.h)
+- [include/connector/local_udp_transport.h](../include/connector/local_udp_transport.h)
+- [include/connector/local_zmq_transport.h](../include/connector/local_zmq_transport.h)
 
 ## Recommendation
 
@@ -23,6 +25,15 @@ Recommended implementation choice:
 
 - On Windows: localhost TCP or a named pipe.
 - On Unix-like systems: localhost TCP or a Unix domain socket.
+
+For low-latency telemetry where producer backpressure must never stall capture,
+prefer local UDP with bounded receive timeouts.
+
+Implementation note in this repository:
+
+- `LocalUdpTransport` is available for timeout-based datagram reads.
+- `LocalTcpTransport` remains available for ordered stream semantics.
+- `LocalZmqTransport` is available for PUB/SUB patterns when built with `-DLBR_ENABLE_ZEROMQ=ON`.
 
 If the consumer side already has a preference, keep the transport behind a small adapter so the pipeline contract does not change.
 
@@ -60,19 +71,28 @@ The connector is not responsible for:
 
 Use the JSON envelope described in [connector-message.schema.json](connector-message.schema.json).
 
+For binary transport, use protobuf with the schema in
+[connector-message.proto](connector-message.proto).
+
+When the flight/embedded side is constrained, use nanopb generated code from the same
+`.proto` schema to keep wire compatibility with the ground side.
+
 Required fields:
 
-- `schema_version`: integer, currently `1`
-- `message_type`: string, currently `telemetry_frame`
+- `schema_version`: integer, `>= 1`
+- `message_type`: non-empty string identifying envelope kind (`telemetry_frame`, `telemetry_decoded`, custom, etc.)
 - `sequence`: monotonically increasing integer starting at `0`
 - `timestamp_ms`: Unix epoch milliseconds
-- `source`: string, one of `sx1262`, `sx127`, or `simulated`
+- `source`: non-empty source identifier (for example `sx1262`, `simulated`, or custom identifiers)
 - `payload_b64`: base64-encoded raw telemetry bytes
 
 Optional fields:
 
 - `checksum_hex`: integrity marker in hexadecimal if the producer wants it
 - `metadata`: extra implementation-specific fields that do not change the contract
+
+The envelope is intentionally extensible so teams can introduce protocol-specific message types
+and source identifiers without changing transport adapters.
 
 Example message:
 
@@ -102,6 +122,9 @@ That structure is enough for the other team to build a consumer without coupling
 Do not let the connector leak into `SDRPipeline` or the LoRa radio abstraction.
 
 The pipeline should continue to depend on `ILoRaModule` only. The connector should remain a separate adapter owned by the consumer-facing layer.
+
+The ground software can optionally perform a lightweight local interpretation pass for operator visibility,
+but this does not change the connector contract and does not replace consumer-side mission interpretation.
 
 ## Notes For The Other Team
 
