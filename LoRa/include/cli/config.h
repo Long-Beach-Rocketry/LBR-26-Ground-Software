@@ -23,6 +23,7 @@ namespace cli {
     struct PipelineSettings {
         bool verbose = false;
         std::string output_path = "output/frame.bin";
+        bool interpret_telemetry = true;
     };
 
     struct LoRaSettings {

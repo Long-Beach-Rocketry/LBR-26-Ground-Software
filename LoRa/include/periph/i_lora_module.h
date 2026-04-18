@@ -11,6 +11,33 @@
 #include <cstdint>
 
 namespace periph {
+    enum class LoRaStatusCode {
+        Ok,
+        Timeout,
+        InvalidArgument,
+        NotInitialized,
+        IoError,
+        Unsupported,
+        UnknownError,
+    };
+
+    struct LoRaSignalMetrics {
+        bool has_signal_metrics = false;
+        int rssi_dbm = 0;
+        float snr_db = 0.0F;
+    };
+
+    struct LoRaTransmitResult {
+        LoRaStatusCode status = LoRaStatusCode::UnknownError;
+        size_t bytes_transmitted = 0;
+    };
+
+    struct LoRaReceiveResult {
+        LoRaStatusCode status = LoRaStatusCode::UnknownError;
+        size_t bytes_received = 0;
+        LoRaSignalMetrics signal;
+    };
+
     /**
      * @brief Interface implemented by all LoRa radio backends.
      *
@@ -22,22 +49,25 @@ namespace periph {
 
             /**
              * @brief Initialize the LoRa radio backend.
-             * @return True if initialization succeeds.
+             * @return Initialization status.
              */
-            virtual bool init() = 0;
+            virtual LoRaStatusCode init() = 0;
 
             /**
              * @brief Transmit a telemetry payload.
              * @param buf Pointer to payload bytes.
              * @param len Number of bytes to send.
+             * @return Transmit status and bytes written to radio backend.
              */
-            virtual void transmit(uint8_t *buf, size_t len) = 0;
+            virtual LoRaTransmitResult transmit(const uint8_t *buf, size_t len) = 0;
 
             /**
              * @brief Receive telemetry bytes from the LoRa backend.
              * @param buf Destination buffer.
-             * @return Number of bytes received.
+             * @param max_len Capacity of destination buffer.
+             * @param timeout_ms Maximum wait for a frame in milliseconds.
+             * @return Receive status, bytes received, and optional signal metrics.
              */
-            virtual int receive(uint8_t *buf) = 0;
+            virtual LoRaReceiveResult receive(uint8_t *buf, size_t max_len, uint32_t timeout_ms) = 0;
     };
 }

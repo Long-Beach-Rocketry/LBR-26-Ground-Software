@@ -66,6 +66,7 @@ TEST(ConfigTests, All) {
             "  module: \"sx127\"\n"
             "pipeline:\n"
             "  verbose: false\n"
+            "  interpret_telemetry: false\n"
             "  output_path: \"telemetry.bin\"\n");
 
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
@@ -79,6 +80,7 @@ TEST(ConfigTests, All) {
         EXPECT_EQ(config.settings().lora.module, std::string("sx127"));
         EXPECT_EQ(config.settings().pipeline.output_path, std::string("telemetry.bin"));
         EXPECT_FALSE(config.settings().pipeline.verbose);
+        EXPECT_FALSE(config.settings().pipeline.interpret_telemetry);
     }
 
     {
@@ -176,6 +178,13 @@ TEST(ConfigTests, All) {
 
     {
         tests::ScopedTempFile file("pipeline:\n  verbose: [true]\n");
+        tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
+        cli::Config config;
+        EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
+    }
+
+    {
+        tests::ScopedTempFile file("pipeline:\n  interpret_telemetry: [true]\n");
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);

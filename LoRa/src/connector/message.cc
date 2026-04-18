@@ -239,10 +239,12 @@ connector::Source connector::source_from_string(std::string_view source_name) {
 }
 
 std::string connector::ConnectorMessage::to_json() const {
-    if (schema_version != 1)
-        throw std::runtime_error("Unsupported connector schema version.");
-    if (message_type != "telemetry_frame")
-        throw std::runtime_error("Unsupported connector message type.");
+    if (schema_version < 1)
+        throw std::runtime_error("schema_version must be >= 1.");
+    if (message_type.empty())
+        throw std::runtime_error("message_type must not be empty.");
+    if (source.empty())
+        throw std::runtime_error("source must not be empty.");
 
     std::ostringstream output;
     output << '{'
@@ -250,7 +252,7 @@ std::string connector::ConnectorMessage::to_json() const {
            << "\"message_type\":" << escape_json_string(message_type) << ','
            << "\"sequence\":" << sequence << ','
            << "\"timestamp_ms\":" << timestamp_ms << ','
-           << "\"source\":" << escape_json_string(source_to_string(source)) << ','
+           << "\"source\":" << escape_json_string(source) << ','
            << "\"payload_b64\":" << escape_json_string(base64_encode(payload));
 
     if (checksum_hex.has_value())
@@ -275,10 +277,19 @@ std::string connector::ConnectorMessage::to_json() const {
 connector::ConnectorMessage connector::ConnectorMessage::from_json(const std::string &json_text) {
     ConnectorMessage message;
     message.schema_version = static_cast<int>(read_uint64_field(json_text, "schema_version"));
+    if (message.schema_version < 1)
+        throw std::runtime_error("schema_version must be >= 1.");
+
     message.message_type = read_string_field(json_text, "message_type");
+    if (message.message_type.empty())
+        throw std::runtime_error("message_type must not be empty.");
+
     message.sequence = read_uint64_field(json_text, "sequence");
     message.timestamp_ms = read_int64_field(json_text, "timestamp_ms");
-    message.source = source_from_string(read_string_field(json_text, "source"));
+    message.source = read_string_field(json_text, "source");
+    if (message.source.empty())
+        throw std::runtime_error("source must not be empty.");
+
     message.payload = base64_decode(read_string_field(json_text, "payload_b64"));
 
     const std::string checksum = read_optional_string_field(json_text, "checksum_hex");

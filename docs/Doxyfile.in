@@ -1,0 +1,42 @@
+PROJECT_NAME           = "LBR-26 Ground Software"
+PROJECT_BRIEF          = "Long Beach Rocketry ground software"
+PROJECT_NUMBER         = "0.1.0"
+OUTPUT_DIRECTORY       = "@LBR_DOXYGEN_OUTPUT_DIR@"
+CREATE_SUBDIRS         = NO
+ALLOW_UNICODE_NAMES    = YES
+OUTPUT_LANGUAGE        = English
+
+INPUT                  = "@LBR_DOXYGEN_INPUT_DIR@/README.md" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/docs" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/LoRa/include" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/LoRa/src" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/LoRa/README.md" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/LoRa/docs"
+FILE_PATTERNS          = *.h *.cc *.md
+RECURSIVE              = YES
+EXCLUDE                = "@LBR_DOXYGEN_INPUT_DIR@/build" \
+                         "@LBR_DOXYGEN_INPUT_DIR@/build-*"
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+FULL_SIDEBAR           = YES
+
+GENERATE_LATEX         = YES
+GENERATE_XML           = NO
+
+USE_MDFILE_AS_MAINPAGE = "@LBR_DOXYGEN_INPUT_DIR@/README.md"
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+INLINE_INHERITED_MEMB  = YES
+SORT_MEMBER_DOCS       = YES
+QUIET                  = NO
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO

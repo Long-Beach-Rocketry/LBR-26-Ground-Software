@@ -1,0 +1,9 @@
+Checks: >-
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  modernize-*,-modernize-use-trailing-return-type
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*LoRa/(include|src|tests)/.*'
+FormatStyle: file

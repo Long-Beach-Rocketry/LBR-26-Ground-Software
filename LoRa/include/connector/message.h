@@ -47,7 +47,7 @@ namespace connector {
         std::string message_type = "telemetry_frame";
         std::uint64_t sequence = 0;
         std::int64_t timestamp_ms = 0;
-        Source source = Source::Simulated;
+        std::string source = "simulated";
         std::vector<std::uint8_t> payload;
         std::optional<std::string> checksum_hex;
         std::map<std::string, std::string> metadata;
@@ -55,7 +55,7 @@ namespace connector {
         /**
          * @brief Serializes this message into a JSON object string matching the connector contract.
          * @return JSON string for one connector message.
-         * @throws std::runtime_error when the schema version or message type is unsupported.
+         * @throws std::runtime_error when required envelope fields are invalid.
          */
         std::string to_json() const;
 
