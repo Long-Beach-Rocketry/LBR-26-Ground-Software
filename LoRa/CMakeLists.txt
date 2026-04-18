@@ -151,6 +151,7 @@ add_library(connector
     src/connector/local_zmq_transport.cc
 )
 target_include_directories(connector PUBLIC include)
+target_link_libraries(connector PRIVATE yaml-cpp::yaml-cpp)
 
 set(LBR_HAS_ZEROMQ 0)
 if(LBR_ENABLE_ZEROMQ)

@@ -7,18 +7,14 @@
 
 #include "connector/message.h"
 
-#include <algorithm>
 #include <cctype>
 #include <iomanip>
-#include <regex>
 #include <sstream>
 #include <stdexcept>
 
-namespace {
-    std::string field_prefix(const std::string &field_name) {
-        return std::string("\"") + field_name + "\"\\s*:\\s*";
-    }
+#include <yaml-cpp/yaml.h>
 
+namespace {
     std::string escape_json_string(const std::string &input) {
         std::ostringstream output;
         output << '"';
@@ -115,105 +111,19 @@ namespace {
         return output;
     }
 
-    std::string read_string_field(const std::string &json_text, const std::string &field_name) {
-        const std::regex pattern(field_prefix(field_name) + R"REGEX("((?:\\.|[^"])*)")REGEX");
-        std::smatch match;
-        if (!std::regex_search(json_text, match, pattern) || match.size() < 2)
-            throw std::runtime_error("Missing string field: " + field_name);
-        return match[1].str();
-    }
+    template <typename T>
+    T read_required_scalar(const YAML::Node &root, const char *field_name) {
+        const YAML::Node node = root[field_name];
+        if (!node)
+            throw std::runtime_error(std::string("Missing field: ") + field_name);
+        if (!node.IsScalar())
+            throw std::runtime_error(std::string("Field must be scalar: ") + field_name);
 
-    std::string unescape_json_string(const std::string &input) {
-        std::string output;
-        output.reserve(input.size());
-        for (std::size_t index = 0; index < input.size(); ++index) {
-            const char character = input[index];
-            if (character != '\\') {
-                output.push_back(character);
-                continue;
-            }
-
-            if (index + 1 >= input.size())
-                throw std::runtime_error("Invalid escape sequence in JSON string.");
-
-            const char escaped = input[++index];
-            switch (escaped) {
-                case '\\': output.push_back('\\'); break;
-                case '"': output.push_back('"'); break;
-                case 'b': output.push_back('\b'); break;
-                case 'f': output.push_back('\f'); break;
-                case 'n': output.push_back('\n'); break;
-                case 'r': output.push_back('\r'); break;
-                case 't': output.push_back('\t'); break;
-                case 'u':
-                    throw std::runtime_error("Unicode escapes are not supported in connector JSON.");
-                default:
-                    throw std::runtime_error("Unknown escape sequence in JSON string.");
-            }
+        try {
+            return node.as<T>();
+        } catch (const YAML::Exception &e) {
+            throw std::runtime_error(std::string("Invalid field '") + field_name + "': " + e.what());
         }
-        return output;
-    }
-
-    std::string read_optional_string_field(const std::string &json_text,
-                                           const std::string &field_name) {
-        const std::regex pattern(field_prefix(field_name) + R"REGEX("((?:\\.|[^"])*)")REGEX");
-        std::smatch match;
-        if (!std::regex_search(json_text, match, pattern) || match.size() < 2)
-            return {};
-        return unescape_json_string(match[1].str());
-    }
-
-    std::uint64_t read_uint64_field(const std::string &json_text, const std::string &field_name) {
-        const std::regex pattern(field_prefix(field_name) + R"(([0-9]+))");
-        std::smatch match;
-        if (!std::regex_search(json_text, match, pattern) || match.size() < 2)
-            throw std::runtime_error("Missing integer field: " + field_name);
-        return static_cast<std::uint64_t>(std::stoull(match[1].str()));
-    }
-
-    std::int64_t read_int64_field(const std::string &json_text, const std::string &field_name) {
-        const std::regex pattern(field_prefix(field_name) + R"((-?[0-9]+))");
-        std::smatch match;
-        if (!std::regex_search(json_text, match, pattern) || match.size() < 2)
-            throw std::runtime_error("Missing integer field: " + field_name);
-        return static_cast<std::int64_t>(std::stoll(match[1].str()));
-    }
-
-    std::string extract_object_text(const std::string &json_text, const std::string &field_name) {
-        const std::string key = '"' + field_name + '"';
-        const std::size_t key_position = json_text.find(key);
-        if (key_position == std::string::npos)
-            return {};
-
-        const std::size_t brace_position = json_text.find('{', key_position + key.size());
-        if (brace_position == std::string::npos)
-            throw std::runtime_error("Malformed object field: " + field_name);
-
-        int depth = 0;
-        for (std::size_t index = brace_position; index < json_text.size(); ++index) {
-            if (json_text[index] == '{')
-                ++depth;
-            else if (json_text[index] == '}') {
-                --depth;
-                if (depth == 0)
-                    return json_text.substr(brace_position + 1, index - brace_position - 1);
-            }
-        }
-
-        throw std::runtime_error("Unterminated object field: " + field_name);
-    }
-
-    std::map<std::string, std::string> parse_metadata_object(const std::string &json_text) {
-        std::map<std::string, std::string> metadata;
-        if (json_text.empty())
-            return metadata;
-
-        const std::regex pattern(R"REGEX("((?:\\.|[^"])*)"\s*:\s*"((?:\\.|[^"])*)")REGEX");
-        for (std::sregex_iterator it(json_text.begin(), json_text.end(), pattern), end; it != end;
-             ++it) {
-            metadata.emplace(unescape_json_string((*it)[1].str()), unescape_json_string((*it)[2].str()));
-        }
-        return metadata;
     }
 }
 
@@ -275,30 +185,54 @@ std::string connector::ConnectorMessage::to_json() const {
 }
 
 connector::ConnectorMessage connector::ConnectorMessage::from_json(const std::string &json_text) {
+    YAML::Node root;
+    try {
+        root = YAML::Load(json_text);
+    } catch (const YAML::Exception &e) {
+        throw std::runtime_error(std::string("Malformed connector JSON: ") + e.what());
+    }
+
+    if (!root || !root.IsMap())
+        throw std::runtime_error("Connector JSON root must be an object.");
+
     ConnectorMessage message;
-    message.schema_version = static_cast<int>(read_uint64_field(json_text, "schema_version"));
+    message.schema_version = static_cast<int>(read_required_scalar<std::uint64_t>(root, "schema_version"));
     if (message.schema_version < 1)
         throw std::runtime_error("schema_version must be >= 1.");
 
-    message.message_type = read_string_field(json_text, "message_type");
+    message.message_type = read_required_scalar<std::string>(root, "message_type");
     if (message.message_type.empty())
         throw std::runtime_error("message_type must not be empty.");
 
-    message.sequence = read_uint64_field(json_text, "sequence");
-    message.timestamp_ms = read_int64_field(json_text, "timestamp_ms");
-    message.source = read_string_field(json_text, "source");
+    message.sequence = read_required_scalar<std::uint64_t>(root, "sequence");
+    message.timestamp_ms = read_required_scalar<std::int64_t>(root, "timestamp_ms");
+    message.source = read_required_scalar<std::string>(root, "source");
     if (message.source.empty())
         throw std::runtime_error("source must not be empty.");
 
-    message.payload = base64_decode(read_string_field(json_text, "payload_b64"));
+    message.payload = base64_decode(read_required_scalar<std::string>(root, "payload_b64"));
 
-    const std::string checksum = read_optional_string_field(json_text, "checksum_hex");
-    if (!checksum.empty())
-        message.checksum_hex = checksum;
+    const YAML::Node checksum_node = root["checksum_hex"];
+    if (checksum_node) {
+        if (!checksum_node.IsScalar())
+            throw std::runtime_error("checksum_hex must be a string.");
+        const std::string checksum = checksum_node.as<std::string>();
+        if (!checksum.empty())
+            message.checksum_hex = checksum;
+    }
 
-    const std::string metadata_text = extract_object_text(json_text, "metadata");
-    if (!metadata_text.empty())
-        message.metadata = parse_metadata_object(metadata_text);
+    const YAML::Node metadata_node = root["metadata"];
+    if (metadata_node) {
+        if (!metadata_node.IsMap())
+            throw std::runtime_error("metadata must be an object.");
+
+        for (const auto &entry : metadata_node) {
+            if (!entry.first.IsScalar() || !entry.second.IsScalar())
+                throw std::runtime_error("metadata keys and values must be strings.");
+
+            message.metadata.emplace(entry.first.as<std::string>(), entry.second.as<std::string>());
+        }
+    }
 
     return message;
 }

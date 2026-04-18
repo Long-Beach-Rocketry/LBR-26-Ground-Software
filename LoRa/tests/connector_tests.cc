@@ -159,11 +159,11 @@ TEST(ConnectorTests, MessageFromJsonRejectsInvalidEscapes) {
                  std::runtime_error);
 }
 
-TEST(ConnectorTests, MessageFromJsonRejectsUnsupportedUnicodeEscape) {
+TEST(ConnectorTests, MessageFromJsonAcceptsUnicodeEscape) {
     const std::string unicode_escape =
         R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"simulated","payload_b64":"AQ==","metadata":{"bad":"\u0041"}})";
-    EXPECT_THROW(static_cast<void>(connector::ConnectorMessage::from_json(unicode_escape)),
-                 std::runtime_error);
+    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(unicode_escape);
+    EXPECT_EQ(parsed.metadata.at("bad"), std::string("A"));
 }
 
 TEST(ConnectorTests, MessageFromJsonRejectsMalformedMetadataObject) {
