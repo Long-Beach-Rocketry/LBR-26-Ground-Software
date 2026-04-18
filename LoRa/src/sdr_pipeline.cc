@@ -10,6 +10,8 @@
 #include "telemetry/interpreter.h"
 
 #include <array>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -33,6 +35,26 @@ namespace {
         }
 
         return "unknown_error";
+    }
+
+    void persist_payload(const std::string &output_path,
+                         const std::uint8_t *payload,
+                         std::size_t payload_len) {
+        if (payload_len == 0)
+            return;
+
+        std::filesystem::path path(output_path);
+        const std::filesystem::path parent = path.parent_path();
+        if (!parent.empty())
+            std::filesystem::create_directories(parent);
+
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        if (!out)
+            throw std::runtime_error("Failed to open telemetry output file: " + output_path);
+
+        out.write(reinterpret_cast<const char *>(payload), static_cast<std::streamsize>(payload_len));
+        if (!out)
+            throw std::runtime_error("Failed to write telemetry output file: " + output_path);
     }
 }
 
@@ -65,6 +87,10 @@ void SDRPipeline::run() {
               << "  lora_module: " << _settings.lora.module << '\n'
               << "  telemetry_status: " << status_to_string(receive_result.status) << '\n'
               << "  telemetry_bytes_received: " << receive_result.bytes_received << '\n';
+
+    persist_payload(_settings.pipeline.output_path,
+                    telemetry_buffer.data(),
+                    receive_result.bytes_received);
 
     if (!_settings.pipeline.interpret_telemetry)
         return;

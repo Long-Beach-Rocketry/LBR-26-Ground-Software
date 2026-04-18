@@ -12,6 +12,8 @@
 #include "sdr_pipeline.h"
 #include "test_common.h"
 
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace {
@@ -129,4 +131,44 @@ TEST(PipelineTests, Sx127SkeletonMethodsAreCallable) {
     const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
     EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Timeout);
     EXPECT_EQ(receive_result.bytes_received, 0U);
+}
+
+TEST(PipelineTests, WritesReceivedPayloadToOutputFile) {
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "lbr_pipeline_output_test.bin";
+    std::error_code ec;
+    std::filesystem::remove(output_path, ec);
+
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = output_path.string();
+    settings.pipeline.interpret_telemetry = false;
+    FakeLoRaModule module;
+
+    SDRPipeline pipeline(settings, module);
+    pipeline.run();
+
+    std::ifstream in(output_path, std::ios::binary);
+    ASSERT_TRUE(in.good());
+    std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    ASSERT_EQ(bytes.size(), static_cast<std::size_t>(6));
+    EXPECT_EQ(static_cast<unsigned char>(bytes[0]), 2U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[1]), 0x10U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[2]), 0x00U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[3]), 0xF4U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[4]), 0x01U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[5]), 87U);
+
+    std::filesystem::remove(output_path, ec);
+}
+
+TEST(PipelineTests, InvalidOutputPathThrowsWhenPayloadMustBePersisted) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "";
+    settings.pipeline.interpret_telemetry = false;
+    FakeLoRaModule module;
+
+    SDRPipeline pipeline(settings, module);
+    EXPECT_THROW(static_cast<void>(pipeline.run()), std::runtime_error);
 }
