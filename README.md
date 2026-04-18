@@ -125,6 +125,13 @@ Run app:
 .\build\lbr_ground.exe --lora-module sx127 -v
 ```
 
+Hardware-in-the-loop smoke (real SX backend on bench):
+
+```powershell
+.\build\lbr_hil_runner.exe --module sx1262 --timeout-ms 5000 --min-bytes 1
+.\build\lbr_hil_runner.exe --module sx127 --timeout-ms 5000 --min-bytes 1
+```
+
 ## Coverage
 
 Current score (last run):
