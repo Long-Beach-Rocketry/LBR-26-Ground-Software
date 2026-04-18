@@ -18,20 +18,26 @@
         "CMAKE_BUILD_TYPE": "Release"
       },
       "environment": {
-        "PATH": "C:/msys64/ucrt64/bin;$penv{PATH}"
+        "PATH": "C:/msys64/ucrt64/bin;C:/msys64/usr/bin;$penv{PATH}"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "windows-ucrt-ninja",
-      "configurePreset": "windows-ucrt-ninja"
+      "configurePreset": "windows-ucrt-ninja",
+      "environment": {
+        "PATH": "C:/msys64/ucrt64/bin;C:/msys64/usr/bin;$penv{PATH}"
+      }
     }
   ],
   "testPresets": [
     {
       "name": "windows-ucrt-ninja",
       "configurePreset": "windows-ucrt-ninja",
+      "environment": {
+        "PATH": "C:/msys64/ucrt64/bin;C:/msys64/usr/bin;$penv{PATH}"
+      },
       "output": {
         "outputOnFailure": true
       }
