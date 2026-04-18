@@ -15,29 +15,19 @@ GoogleTest is also fetched automatically when `BUILD_TESTING=ON` (default).
 Recommended single command from repository root:
 
 ```powershell
-.\build.ps1
+.\dev.ps1 build
 ```
 
 Build only (skip tests):
 
 ```powershell
-.\build.ps1 -SkipTests
-```
-
-`build.ps1` forwards all arguments to `tools/build.ps1`.
-
-Equivalent manual commands:
-
-```powershell
-$env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
-cmake -S . -B build -G Ninja -DCMAKE_MAKE_PROGRAM=C:\msys64\ucrt64\bin\ninja.exe -DCMAKE_CXX_COMPILER=C:\msys64\ucrt64\bin\g++.exe -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+.\dev.ps1 build-only
 ```
 
 ## Test
 
 ```powershell
-ctest --test-dir build --output-on-failure
+.\dev.ps1 test
 ```
 
 This runs:
@@ -49,9 +39,7 @@ This runs:
 When `clang-format` and `clang-tidy` are installed in `PATH`, CMake exposes sanity targets:
 
 ```powershell
-cmake --build build --target clang-format-check
-cmake --build build --target clang-tidy
-cmake --build build --target sanity-check
+.\dev.ps1 sanity
 ```
 
 If either tool is missing from `PATH`, the corresponding target fails with an explicit message.
@@ -61,7 +49,7 @@ If either tool is missing from `PATH`, the corresponding target fails with an ex
 Generate API documentation:
 
 ```powershell
-cmake --build build --target docs
+.\dev.ps1 docs
 ```
 
 Generated HTML entry point:
@@ -71,7 +59,7 @@ Generated HTML entry point:
 Generate PDF documentation:
 
 ```powershell
-cmake --build build --target docs-pdf
+.\dev.ps1 docs-pdf
 ```
 
 Generated PDF:
@@ -83,14 +71,13 @@ If `doxygen` is missing from `PATH`, the target fails with an explicit message.
 Optional compile-time tidy enforcement:
 
 ```powershell
-cmake -S . -B build -DLBR_ENABLE_CLANG_TIDY=ON
-cmake --build build -j
+.\dev.ps1 tidy
 ```
 
 Automatic formatting target:
 
 ```powershell
-cmake --build build --target clang-format
+.\dev.ps1 format
 ```
 
 ## Coverage
@@ -98,10 +85,7 @@ cmake --build build --target clang-format
 Build with coverage instrumentation:
 
 ```powershell
-$env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
-cmake -S . -B build-coverage -G Ninja -DCMAKE_MAKE_PROGRAM=C:\msys64\ucrt64\bin\ninja.exe -DCMAKE_CXX_COMPILER=C:\msys64\ucrt64\bin\g++.exe -DCMAKE_BUILD_TYPE=Debug -DLBR_ENABLE_COVERAGE=ON
-cmake --build build-coverage -j
-cmake --build build-coverage --target coverage
+.\dev.ps1 coverage
 ```
 
 Coverage artifacts are generated in:

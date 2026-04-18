@@ -11,19 +11,19 @@ For constrained targets, nanopb can generate bounded C structs from the same sch
 Configure with optional code generation enabled:
 
 ```powershell
-cmake -S . -B build -DLBR_ENABLE_PROTOBUF_CODEGEN=ON
+.\dev.ps1 proto
 ```
 
 Generate C++ protobuf sources (ground side):
 
 ```powershell
-cmake --build build --target connector_proto_codegen
+.\dev.ps1 proto
 ```
 
 Generate nanopb sources (embedded side):
 
 ```powershell
-cmake --build build --target connector_nanopb_codegen
+.\dev.ps1 nanopb
 ```
 
 Generated files are written to:
