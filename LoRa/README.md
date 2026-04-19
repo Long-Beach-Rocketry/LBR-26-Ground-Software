@@ -15,9 +15,9 @@ Ground software skeleton for the Long Beach Rocketry station, organized under th
 
 The pipeline now consumes telemetry through `ILoRaModule`:
 
-- `init()`
-- `transmit(uint8_t* buf, size_t len)`
-- `receive(uint8_t* buf)`
+- `init() -> LoRaStatusCode`
+- `transmit(const uint8_t* buf, size_t len) -> LoRaTransmitResult`
+- `receive(uint8_t* buf, size_t max_len, uint32_t timeout_ms) -> LoRaReceiveResult`
 
 Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
 
@@ -26,8 +26,13 @@ Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x 
 ```text
 LoRa/
   include/
+Keyword interface (recommended):
+
+```powershell
+.\dev.ps1 build
+```
     cli/
-      args.h
+Legacy direct entrypoint:
       config.h
     periph/
       i_lora_module.h
@@ -36,16 +41,9 @@ LoRa/
     sdr_pipeline.h
   src/
     cli/
-      args.cc
+.\dev.ps1 build-only
       config.cc
     periph/
-      sx1262_module.cc
-      sx127_module.cc
-    main.cc
-    sdr_pipeline.cc
-  tests/
-    args_tests.cc
-    config_tests.cc
     pipeline_tests.cc
   config.demo.yaml
   CMakeLists.txt
@@ -69,11 +67,45 @@ The CLI option overrides defaults and is validated.
 
 From repository root:
 
+Keyword interface (recommended):
+
 ```powershell
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
+.\dev.ps1 build
 ```
+
+Build only (skip tests):
+
+```powershell
+.\dev.ps1 build-only
+```
+
+Sanity checks (when `clang-format` and `clang-tidy` are available in `PATH`):
+
+```powershell
+.\dev.ps1 sanity
+```
+
+If either tool is missing from `PATH`, `sanity-check` fails with a clear message.
+
+Generate API documentation (when `doxygen` is available in `PATH`):
+
+```powershell
+.\dev.ps1 docs
+```
+
+Generate PDF API documentation:
+
+```powershell
+.\dev.ps1 docs-pdf
+```
+
+Generated HTML entry point:
+
+- `build/docs/doxygen/html/index.html`
+
+Generated PDF:
+
+- `build/docs/doxygen/latex/refman.pdf`
 
 Run app:
 
@@ -107,7 +139,7 @@ Project source metrics (all production .cc files):
 Generate coverage from repository root:
 
 ```powershell
-cmake --build build-coverage --target coverage
+.\dev.ps1 coverage
 ```
 
 Coverage artifacts are written to:

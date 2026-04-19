@@ -75,26 +75,24 @@ Single-command build + test (recommended):
 .\build.ps1
 ```
 
+Keyword interface (recommended for all recurring workflows):
+
+```powershell
+.\dev.ps1 build
+```
+
 Build only (skip tests):
 
 ```powershell
-.\build.ps1 -SkipTests
+.\dev.ps1 build-only
 ```
 
 The root script forwards to `tools/build.ps1` and keeps a stable one-command entrypoint.
 
-Manual equivalent:
-
-```powershell
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
-
 Sanity checks (when `clang-format` and `clang-tidy` are available in `PATH`):
 
 ```powershell
-cmake --build build --target sanity-check
+.\dev.ps1 sanity
 ```
 
 If either tool is missing from `PATH`, `sanity-check` fails with a clear message.
@@ -102,13 +100,13 @@ If either tool is missing from `PATH`, `sanity-check` fails with a clear message
 Generate API documentation (when `doxygen` is available in `PATH`):
 
 ```powershell
-cmake --build build --target docs
+.\dev.ps1 docs
 ```
 
 Generate PDF API documentation:
 
 ```powershell
-cmake --build build --target docs-pdf
+.\dev.ps1 docs-pdf
 ```
 
 Generated HTML entry point:
@@ -151,7 +149,7 @@ Project source metrics (all production .cc files):
 Generate coverage from repository root:
 
 ```powershell
-cmake --build build-coverage --target coverage
+.\dev.ps1 coverage
 ```
 
 Coverage artifacts are written to:
