@@ -71,12 +71,11 @@ else()
 endif()
 
 if(CLANG_TIDY_EXECUTABLE)
-    set(LBR_CLANG_TIDY_CHECKS "-*,clang-analyzer-*,bugprone-*,performance-*,portability-*")
+    set(LBR_CLANG_TIDY_CHECKS "-*,clang-analyzer-*,bugprone-*,performance-*,portability-*,-clang-diagnostic-clang-format-violations")
     add_custom_target(clang-tidy
         COMMAND ${CLANG_TIDY_EXECUTABLE}
             -p ${CMAKE_BINARY_DIR}
             -checks=${LBR_CLANG_TIDY_CHECKS}
-            -extra-arg=-Wno-clang-format-violations
             ${LBR_TIDY_SOURCE_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Running clang-tidy static analysis."
