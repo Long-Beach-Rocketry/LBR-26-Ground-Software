@@ -25,13 +25,13 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-ninja-release
 
       - name: Build
-        run: cmake --build build -j
+        run: cmake --build --preset linux-ninja-release --target lbr_tests
 
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --preset linux-ninja-release
 
   clang:
     name: Clang Checks
@@ -48,10 +48,10 @@ jobs:
           sudo apt-get install -y ninja-build clang-format clang-tidy
 
       - name: Configure for clang checks
-        run: cmake -S . -B build-clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake --preset linux-ninja-release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang sanity checks
-        run: cmake --build build-clang --target sanity-check
+        run: cmake --build --preset linux-ninja-release --target sanity-check
 
   docs:
     name: Build Docs
@@ -68,16 +68,16 @@ jobs:
           sudo apt-get install -y ninja-build doxygen graphviz
 
       - name: Configure for docs
-        run: cmake -S . -B build-docs -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-ninja-release
 
       - name: Build docs
-        run: cmake --build build-docs --target docs
+        run: cmake --build --preset linux-ninja-release --target docs
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v4
         with:
           name: doxygen-html
-          path: build-docs/docs/doxygen/html
+          path: build-linux/docs/doxygen/html
 
   coverage:
     name: Coverage
@@ -97,29 +97,29 @@ jobs:
         run: python3 -m pip install --upgrade gcovr
 
       - name: Configure (coverage)
-        run: cmake -S . -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLBR_ENABLE_COVERAGE=ON
+        run: cmake --preset linux-ninja-coverage
 
       - name: Build (coverage)
-        run: cmake --build build-coverage -j
+        run: cmake --build --preset linux-ninja-coverage --target lbr_tests
 
       - name: Run tests (coverage)
-        run: ctest --test-dir build-coverage --output-on-failure
+        run: ctest --preset linux-ninja-coverage
 
       - name: Generate coverage reports
         run: |
           gcovr -r . \
             --filter '^.*/src/' \
             --exclude '^.*/build.*/_deps/' \
-            --xml-pretty -o build-coverage/coverage.xml \
-            --html-details -o build-coverage/coverage.html
+            --xml-pretty -o build-linux-coverage/coverage.xml \
+            --html-details -o build-linux-coverage/coverage.html
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: |
-            build-coverage/coverage.xml
-            build-coverage/coverage.html
+            build-linux-coverage/coverage.xml
+            build-linux-coverage/coverage.html
 
   feature-options:
     name: Feature Options (ZeroMQ + Protobuf)
@@ -138,19 +138,19 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure with optional features
-        run: cmake -S . -B build-features -G Ninja -DCMAKE_BUILD_TYPE=Release -DLBR_ENABLE_ZEROMQ=ON -DLBR_ENABLE_PROTOBUF_CODEGEN=ON
+        run: cmake --preset linux-ninja-feature-options
 
       - name: Build tests with optional features
-        run: cmake --build build-features -j --target lbr_tests
+        run: cmake --build --preset linux-ninja-feature-options --target lbr_tests
 
       - name: Generate protobuf code
-        run: cmake --build build-features --target connector_proto_codegen
+        run: cmake --build --preset linux-ninja-feature-options --target connector_proto_codegen
 
       - name: Generate nanopb code
-        run: cmake --build build-features --target connector_nanopb_codegen
+        run: cmake --build --preset linux-ninja-feature-options --target connector_nanopb_codegen
 
       - name: Run ZeroMQ connector test
-        run: ctest --test-dir build-features -R ConnectorTests.LocalZmqTransportPubSubExchange --output-on-failure
+        run: ctest --preset linux-ninja-feature-options -R ConnectorTests.LocalZmqTransportPubSubExchange
 
   windows-smoke:
     name: Windows UCRT Smoke

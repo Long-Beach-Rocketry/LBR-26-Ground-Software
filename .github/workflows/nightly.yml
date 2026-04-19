@@ -40,48 +40,48 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure with feature options
-        run: cmake -S . -B build-nightly -G Ninja -DCMAKE_BUILD_TYPE=Release -DLBR_ENABLE_ZEROMQ=ON -DLBR_ENABLE_PROTOBUF_CODEGEN=ON
+        run: cmake --preset linux-ninja-feature-options
 
       - name: Build tests
-        run: cmake --build build-nightly -j --target lbr_tests
+        run: cmake --build --preset linux-ninja-feature-options --target lbr_tests
 
       - name: Run full tests
-        run: ctest --test-dir build-nightly --output-on-failure
+        run: ctest --preset linux-ninja-feature-options
 
       - name: Generate protobuf code
-        run: cmake --build build-nightly --target connector_proto_codegen connector_nanopb_codegen
+        run: cmake --build --preset linux-ninja-feature-options --target connector_proto_codegen connector_nanopb_codegen
 
       - name: Run clang sanity checks
-        run: cmake --build build-nightly --target sanity-check
+        run: cmake --build --preset linux-ninja-feature-options --target sanity-check
 
       - name: Build docs
-        run: cmake --build build-nightly --target docs
+        run: cmake --build --preset linux-ninja-feature-options --target docs
 
       - name: Configure coverage build
-        run: cmake -S . -B build-nightly-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLBR_ENABLE_COVERAGE=ON
+        run: cmake --preset linux-ninja-coverage
 
       - name: Build coverage tests
-        run: cmake --build build-nightly-coverage -j --target lbr_tests
+        run: cmake --build --preset linux-ninja-coverage --target lbr_tests
 
       - name: Run coverage tests
-        run: ctest --test-dir build-nightly-coverage --output-on-failure
+        run: ctest --preset linux-ninja-coverage
 
       - name: Generate coverage report
         run: |
           gcovr -r . \
             --filter '^.*/src/' \
             --exclude '^.*/build.*/_deps/' \
-            --xml-pretty -o build-nightly-coverage/coverage.xml \
-            --html-details -o build-nightly-coverage/coverage.html
+            --xml-pretty -o build-linux-coverage/coverage.xml \
+            --html-details -o build-linux-coverage/coverage.html
 
       - name: Upload nightly artifacts
         uses: actions/upload-artifact@v4
         with:
           name: nightly-linux-artifacts
           path: |
-            build-nightly/docs/doxygen/html
-            build-nightly-coverage/coverage.xml
-            build-nightly-coverage/coverage.html
+            build-linux-features/docs/doxygen/html
+            build-linux-coverage/coverage.xml
+            build-linux-coverage/coverage.html
 
   nightly-windows:
     name: Nightly Windows Smoke

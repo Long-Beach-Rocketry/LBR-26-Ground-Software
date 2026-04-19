@@ -31,6 +31,14 @@ cmake --preset windows-ucrt-ninja
 cmake --build --preset windows-ucrt-ninja --target lbr_tests
 ```
 
+Direct preset configure/build on Linux:
+
+```bash
+cmake --preset linux-ninja-release
+cmake --build --preset linux-ninja-release --target lbr_tests
+ctest --preset linux-ninja-release
+```
+
 ## Test
 
 ```powershell
@@ -128,3 +136,8 @@ Current CI workflow includes:
 - Windows smoke
 - clang sanity (`clang-format-check`, `clang-tidy`)
 - docs build
+
+Platform split note:
+
+- Linux jobs use `linux-ninja-*` presets
+- Windows jobs use `windows-ucrt-ninja` preset

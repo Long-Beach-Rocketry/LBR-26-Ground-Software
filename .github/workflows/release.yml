@@ -32,16 +32,16 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Configure
-        run: cmake -S . -B build-release-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-ninja-release
 
       - name: Build binaries
-        run: cmake --build build-release-linux --target lbr_ground lbr_hil_runner
+        run: cmake --build --preset linux-ninja-release --target lbr_ground lbr_hil_runner
 
       - name: Package Linux artifacts
         run: |
           mkdir -p release/linux
-          cp build-release-linux/LoRa/lbr_ground release/linux/
-          cp build-release-linux/LoRa/lbr_hil_runner release/linux/
+          cp build-linux/LoRa/lbr_ground release/linux/
+          cp build-linux/LoRa/lbr_hil_runner release/linux/
           tar -czf lbr-linux-x64.tar.gz -C release/linux .
 
       - name: Upload Linux artifact
@@ -104,13 +104,13 @@ jobs:
           sudo apt-get install -y ninja-build doxygen graphviz
 
       - name: Configure
-        run: cmake -S . -B build-release-docs -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-ninja-release
 
       - name: Build docs
-        run: cmake --build build-release-docs --target docs
+        run: cmake --build --preset linux-ninja-release --target docs
 
       - name: Package docs
-        run: tar -czf lbr-docs-html.tar.gz -C build-release-docs/docs/doxygen html
+        run: tar -czf lbr-docs-html.tar.gz -C build-linux/docs/doxygen html
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v4
