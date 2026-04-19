@@ -15,9 +15,9 @@ Ground software skeleton for the Long Beach Rocketry station, organized under th
 
 The pipeline now consumes telemetry through `ILoRaModule`:
 
-- `init()`
-- `transmit(uint8_t* buf, size_t len)`
-- `receive(uint8_t* buf)`
+- `init() -> LoRaStatusCode`
+- `transmit(const uint8_t* buf, size_t len) -> LoRaTransmitResult`
+- `receive(uint8_t* buf, size_t max_len, uint32_t timeout_ms) -> LoRaReceiveResult`
 
 Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
 
@@ -69,11 +69,53 @@ The CLI option overrides defaults and is validated.
 
 From repository root:
 
+Single-command build + test (recommended):
+
+```powershell
+.\tools\build.ps1
+```
+
+Build only (skip tests):
+
+```powershell
+.\tools\build.ps1 -SkipTests
+```
+
+Manual equivalent:
+
 ```powershell
 cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+Sanity checks (when `clang-format` and `clang-tidy` are available in `PATH`):
+
+```powershell
+cmake --build build --target sanity-check
+```
+
+If either tool is missing from `PATH`, `sanity-check` fails with a clear message.
+
+Generate API documentation (when `doxygen` is available in `PATH`):
+
+```powershell
+cmake --build build --target docs
+```
+
+Generate PDF API documentation:
+
+```powershell
+cmake --build build --target docs-pdf
+```
+
+Generated HTML entry point:
+
+- `build/docs/doxygen/html/index.html`
+
+Generated PDF:
+
+- `build/docs/doxygen/latex/refman.pdf`
 
 Run app:
 
