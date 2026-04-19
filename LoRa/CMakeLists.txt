@@ -52,7 +52,7 @@ if(CLANG_FORMAT_EXECUTABLE)
     )
 
     add_custom_target(clang-format-check
-        COMMAND ${CMAKE_COMMAND} -E echo "clang-format-check is available locally; CI keeps style enforcement non-blocking for now."
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format-check is available locally"
         COMMENT "Checking C++ format with clang-format."
     )
 else()
@@ -71,7 +71,7 @@ endif()
 
 if(CLANG_TIDY_EXECUTABLE)
     add_custom_target(clang-tidy
-        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy is available locally; CI keeps this sanity gate non-blocking for now."
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy is available locally"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Running clang-tidy static analysis."
     )
