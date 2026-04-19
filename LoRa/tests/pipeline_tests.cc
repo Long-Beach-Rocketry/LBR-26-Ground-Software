@@ -133,6 +133,24 @@ TEST(PipelineTests, Sx127SkeletonMethodsAreCallable) {
     EXPECT_EQ(receive_result.bytes_received, 0U);
 }
 
+TEST(PipelineTests, Sx1262ReturnsNotInitializedBeforeInit) {
+    periph::SX1262Module module;
+    uint8_t buffer[4] = {0, 0, 0, 0};
+
+    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::NotInitialized);
+    EXPECT_EQ(module.receive(buffer, sizeof(buffer), 50).status,
+              periph::LoRaStatusCode::NotInitialized);
+}
+
+TEST(PipelineTests, Sx127ReturnsNotInitializedBeforeInit) {
+    periph::SX127Module module;
+    uint8_t buffer[4] = {0, 0, 0, 0};
+
+    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::NotInitialized);
+    EXPECT_EQ(module.receive(buffer, sizeof(buffer), 50).status,
+              periph::LoRaStatusCode::NotInitialized);
+}
+
 TEST(PipelineTests, WritesReceivedPayloadToOutputFile) {
     const std::filesystem::path output_path =
         std::filesystem::temp_directory_path() / "lbr_pipeline_output_test.bin";
