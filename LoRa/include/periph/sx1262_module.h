@@ -18,5 +18,8 @@ namespace periph {
             LoRaStatusCode init() override;
             LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override;
             LoRaReceiveResult receive(uint8_t *buf, size_t max_len, uint32_t timeout_ms) override;
+
+        private:
+            bool _initialized = false;
     };
 }
