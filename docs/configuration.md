@@ -17,6 +17,7 @@ sdr:
 
 pipeline:
   verbose: true
+  interpret_telemetry: true
   output_path: "output/frame.bin"
 ```
 
@@ -32,6 +33,7 @@ pipeline:
 ### `pipeline`
 
 - `verbose` (`bool`)
+- `interpret_telemetry` (`bool`)
 - `output_path` (`string`)
 
 ## Defaults
@@ -43,6 +45,7 @@ If a key is missing, defaults are used:
 - `sdr.center_freq_hz = 433920000`
 - `sdr.gain_db = 30`
 - `pipeline.verbose = false`
+- `pipeline.interpret_telemetry = true`
 - `pipeline.output_path = "output/frame.bin"`
 
 ## Validation Rules

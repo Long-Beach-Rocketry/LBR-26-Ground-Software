@@ -161,6 +161,11 @@ bool cli::Config::parse_config_file(std::string &error_message) {
             if (!parse_optional_value(
                     pipeline_node, "output_path", _settings.pipeline.output_path, error_message))
                 return false;
+            if (!parse_optional_value(pipeline_node,
+                                      "interpret_telemetry",
+                                      _settings.pipeline.interpret_telemetry,
+                                      error_message))
+                return false;
         }
 
             const YAML::Node lora_node = root["lora"];

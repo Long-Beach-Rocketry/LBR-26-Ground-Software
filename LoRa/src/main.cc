@@ -62,7 +62,7 @@ int main(int argc, char * const argv[]) {
 
     std::unique_ptr<periph::ILoRaModule> lora_module =
         create_lora_module(config.settings().lora.module);
-    SDRPipeline pipeline(config.settings(), lora_module.get());
+    SDRPipeline pipeline(config.settings(), *lora_module);
 
     try {
         pipeline.run();

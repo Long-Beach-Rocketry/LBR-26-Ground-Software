@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package lbr.connector.v1;
+
+message ConnectorMessage {
+  uint32 schema_version = 1;
+  string message_type = 2;
+  uint64 sequence = 3;
+  int64 timestamp_ms = 4;
+  string source = 5;
+  bytes payload = 6;
+  optional string checksum_hex = 7;
+  map<string, string> metadata = 8;
+}

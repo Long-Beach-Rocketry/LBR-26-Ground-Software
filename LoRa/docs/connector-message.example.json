@@ -1,9 +1,13 @@
 {
-  "schema_version": 1,
-  "message_type": "telemetry_frame",
+  "schema_version": 2,
+  "message_type": "telemetry_decoded",
   "sequence": 42,
   "timestamp_ms": 1712345678901,
-  "source": "sx1262",
+  "source": "sx1262.custom-v1",
   "payload_b64": "AQIDBA==",
-  "checksum_hex": "4A1F9C2B"
+  "checksum_hex": "4A1F9C2B",
+  "metadata": {
+    "protocol": "lbr.flight.v2",
+    "decoder": "ground-station"
+  }
 }

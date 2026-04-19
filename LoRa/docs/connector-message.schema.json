@@ -15,11 +15,11 @@
   "properties": {
     "schema_version": {
       "type": "integer",
-      "const": 1
+      "minimum": 1
     },
     "message_type": {
       "type": "string",
-      "const": "telemetry_frame"
+      "minLength": 1
     },
     "sequence": {
       "type": "integer",
@@ -31,11 +31,11 @@
     },
     "source": {
       "type": "string",
-      "enum": ["sx1262", "sx127", "simulated"]
+      "minLength": 1
     },
     "payload_b64": {
       "type": "string",
-      "minLength": 1
+      "minLength": 0
     },
     "checksum_hex": {
       "type": "string",

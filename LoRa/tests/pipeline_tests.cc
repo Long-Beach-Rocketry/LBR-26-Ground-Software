@@ -17,20 +17,33 @@
 namespace {
     class FakeLoRaModule final : public periph::ILoRaModule {
         public:
-            bool init() override {
+            periph::LoRaStatusCode init() override {
                 initialized = true;
-                return true;
+                return periph::LoRaStatusCode::Ok;
             }
 
-            void transmit(uint8_t * /*buf*/, size_t /*len*/) override {}
+            periph::LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override {
+                if (buf == nullptr && len > 0)
+                    return {periph::LoRaStatusCode::InvalidArgument, 0};
 
-            int receive(uint8_t *buf) override {
+                return {periph::LoRaStatusCode::Ok, len};
+            }
+
+            periph::LoRaReceiveResult receive(uint8_t *buf, size_t max_len,
+                                              uint32_t /*timeout_ms*/) override {
                 if (buf == nullptr)
-                    return 0;
+                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
 
-                buf[0] = 0xAA;
-                buf[1] = 0x55;
-                return 2;
+                if (max_len < 6)
+                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
+                buf[0] = 2;
+                buf[1] = 0x10;
+                buf[2] = 0x00;
+                buf[3] = 0xF4;
+                buf[4] = 0x01;
+                buf[5] = 87;
+                return {periph::LoRaStatusCode::Ok, 6, {true, -84, 7.5F}};
             }
 
             bool initialized = false;
@@ -38,14 +51,17 @@ namespace {
 
     class FailingLoRaModule final : public periph::ILoRaModule {
         public:
-            bool init() override {
-                return false;
+            periph::LoRaStatusCode init() override {
+                return periph::LoRaStatusCode::IoError;
             }
 
-            void transmit(uint8_t * /*buf*/, size_t /*len*/) override {}
+            periph::LoRaTransmitResult transmit(const uint8_t * /*buf*/, size_t /*len*/) override {
+                return {periph::LoRaStatusCode::Unsupported, 0};
+            }
 
-            int receive(uint8_t * /*buf*/) override {
-                return 0;
+            periph::LoRaReceiveResult receive(uint8_t * /*buf*/, size_t /*max_len*/,
+                                              uint32_t /*timeout_ms*/) override {
+                return {periph::LoRaStatusCode::Unsupported, 0, {}};
             }
     };
 }
@@ -57,7 +73,7 @@ TEST(PipelineTests, All) {
         settings.pipeline.output_path = "silent.bin";
         FakeLoRaModule module;
 
-        SDRPipeline pipeline(settings, &module);
+        SDRPipeline pipeline(settings, module);
         const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
         EXPECT_TRUE(output.empty());
         EXPECT_TRUE(module.initialized);
@@ -74,25 +90,21 @@ TEST(PipelineTests, All) {
         settings.lora.module = "sx1262";
         FakeLoRaModule module;
 
-        SDRPipeline pipeline(settings, &module);
+        SDRPipeline pipeline(settings, module);
         const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
         EXPECT_NE(output.find("Starting SDR pipeline"), std::string::npos);
         EXPECT_NE(output.find("device: rtlsdr"), std::string::npos);
         EXPECT_NE(output.find("output_path: output/frame.bin"), std::string::npos);
         EXPECT_NE(output.find("lora_module: sx1262"), std::string::npos);
-        EXPECT_NE(output.find("telemetry_bytes_received: 2"), std::string::npos);
-    }
-
-    {
-        cli::RuntimeSettings settings;
-        SDRPipeline pipeline(settings, nullptr);
-        EXPECT_THROW(static_cast<void>(pipeline.run()), std::invalid_argument);
+        EXPECT_NE(output.find("telemetry_status: ok"), std::string::npos);
+        EXPECT_NE(output.find("telemetry_bytes_received: 6"), std::string::npos);
+        EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
     }
 
     {
         cli::RuntimeSettings settings;
         FailingLoRaModule module;
-        SDRPipeline pipeline(settings, &module);
+        SDRPipeline pipeline(settings, module);
         EXPECT_THROW(static_cast<void>(pipeline.run()), std::runtime_error);
     }
 }
@@ -101,16 +113,20 @@ TEST(PipelineTests, Sx1262SkeletonMethodsAreCallable) {
     periph::SX1262Module module;
     uint8_t buffer[4] = {0, 0, 0, 0};
 
-    EXPECT_TRUE(module.init());
-    module.transmit(buffer, sizeof(buffer));
-    EXPECT_EQ(module.receive(buffer), 0);
+    EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::Ok);
+    const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
+    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Timeout);
+    EXPECT_EQ(receive_result.bytes_received, 0U);
 }
 
 TEST(PipelineTests, Sx127SkeletonMethodsAreCallable) {
     periph::SX127Module module;
     uint8_t buffer[4] = {0, 0, 0, 0};
 
-    EXPECT_TRUE(module.init());
-    module.transmit(buffer, sizeof(buffer));
-    EXPECT_EQ(module.receive(buffer), 0);
+    EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::Ok);
+    const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
+    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Timeout);
+    EXPECT_EQ(receive_result.bytes_received, 0U);
 }

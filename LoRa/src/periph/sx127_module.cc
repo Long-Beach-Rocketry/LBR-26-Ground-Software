@@ -7,15 +7,23 @@
 
 #include "periph/sx127_module.h"
 
-bool periph::SX127Module::init() {
-    return true;
+periph::LoRaStatusCode periph::SX127Module::init() {
+    return periph::LoRaStatusCode::Ok;
 }
 
-void periph::SX127Module::transmit(uint8_t * /*buf*/, size_t /*len*/) {
+periph::LoRaTransmitResult periph::SX127Module::transmit(const uint8_t *buf, size_t len) {
+    if (buf == nullptr && len > 0)
+        return {periph::LoRaStatusCode::InvalidArgument, 0};
+
     // TODO: Wire actual SX127 TX implementation.
+    return {periph::LoRaStatusCode::Ok, len};
 }
 
-int periph::SX127Module::receive(uint8_t * /*buf*/) {
+periph::LoRaReceiveResult periph::SX127Module::receive(uint8_t *buf, size_t max_len,
+                                                       uint32_t /*timeout_ms*/) {
+    if (buf == nullptr && max_len > 0)
+        return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
     // TODO: Wire actual SX127 RX implementation.
-    return 0;
+    return {periph::LoRaStatusCode::Timeout, 0, {}};
 }
