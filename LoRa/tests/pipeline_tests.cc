@@ -111,26 +111,61 @@ TEST(PipelineTests, All) {
     }
 }
 
-TEST(PipelineTests, Sx1262SkeletonMethodsAreCallable) {
+TEST(PipelineTests, Sx1262VirtualMethodsAreCallable) {
     periph::SX1262Module module;
-    uint8_t buffer[4] = {0, 0, 0, 0};
+    uint8_t buffer[6] = {0, 0, 0, 0, 0, 0};
 
     EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
-    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::Ok);
     const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
-    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Timeout);
-    EXPECT_EQ(receive_result.bytes_received, 0U);
+    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(receive_result.bytes_received, 6U);
+    EXPECT_TRUE(receive_result.signal.has_signal_metrics);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[0]), 2U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[1]), 0x10U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[2]), 0x00U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[3]), 0xF4U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[4]), 0x01U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[5]), 87U);
+
+    const uint8_t tx_payload[] = {0xAA, 0xBB, 0xCC};
+    EXPECT_EQ(module.transmit(tx_payload, sizeof(tx_payload)).status, periph::LoRaStatusCode::Ok);
+
+    uint8_t echoed[3] = {0, 0, 0};
+    const periph::LoRaReceiveResult echoed_result = module.receive(echoed, sizeof(echoed), 50);
+    EXPECT_EQ(echoed_result.status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(echoed_result.bytes_received, 3U);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[0]), 0xAAU);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[1]), 0xBBU);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[2]), 0xCCU);
 }
 
-TEST(PipelineTests, Sx127SkeletonMethodsAreCallable) {
+TEST(PipelineTests, Sx127VirtualMethodsAreCallable) {
     periph::SX127Module module;
-    uint8_t buffer[4] = {0, 0, 0, 0};
+    uint8_t buffer[6] = {0, 0, 0, 0, 0, 0};
 
     EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
-    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::Ok);
     const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
-    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Timeout);
-    EXPECT_EQ(receive_result.bytes_received, 0U);
+    EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(receive_result.bytes_received, 6U);
+    EXPECT_TRUE(receive_result.signal.has_signal_metrics);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[0]), 2U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[1]), 0x10U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[2]), 0x00U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[3]), 0xF4U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[4]), 0x01U);
+    EXPECT_EQ(static_cast<unsigned char>(buffer[5]), 87U);
+
+    const uint8_t tx_payload[] = {0x11, 0x22, 0x33, 0x44};
+    EXPECT_EQ(module.transmit(tx_payload, sizeof(tx_payload)).status, periph::LoRaStatusCode::Ok);
+
+    uint8_t echoed[4] = {0, 0, 0, 0};
+    const periph::LoRaReceiveResult echoed_result = module.receive(echoed, sizeof(echoed), 50);
+    EXPECT_EQ(echoed_result.status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(echoed_result.bytes_received, 4U);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[0]), 0x11U);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[1]), 0x22U);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[2]), 0x33U);
+    EXPECT_EQ(static_cast<unsigned char>(echoed[3]), 0x44U);
 }
 
 TEST(PipelineTests, Sx1262ReturnsNotInitializedBeforeInit) {
