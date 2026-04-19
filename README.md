@@ -58,6 +58,10 @@ Main CI workflow runs:
 
 Workflow file: [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
+Nightly regression workflow runs a broader Linux+Windows sweep on schedule:
+
+- [.github/workflows/nightly.yml](.github/workflows/nightly.yml)
+
 ## Releases
 
 Release automation is handled by [.github/workflows/release.yml](.github/workflows/release.yml).

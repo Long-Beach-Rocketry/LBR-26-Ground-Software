@@ -1,0 +1,114 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nightly-linux:
+    name: Nightly Linux Regression
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools and optional deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            libzmq3-dev \
+            protobuf-compiler \
+            python3-pip \
+            clang-format \
+            clang-tidy \
+            doxygen \
+            graphviz
+          python3 -m pip install --user nanopb gcovr
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure with feature options
+        run: cmake -S . -B build-nightly -G Ninja -DCMAKE_BUILD_TYPE=Release -DLBR_ENABLE_ZEROMQ=ON -DLBR_ENABLE_PROTOBUF_CODEGEN=ON
+
+      - name: Build tests
+        run: cmake --build build-nightly -j --target lbr_tests
+
+      - name: Run full tests
+        run: ctest --test-dir build-nightly --output-on-failure
+
+      - name: Generate protobuf code
+        run: cmake --build build-nightly --target connector_proto_codegen connector_nanopb_codegen
+
+      - name: Run clang sanity checks
+        run: cmake --build build-nightly --target sanity-check
+
+      - name: Build docs
+        run: cmake --build build-nightly --target docs
+
+      - name: Configure coverage build
+        run: cmake -S . -B build-nightly-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLBR_ENABLE_COVERAGE=ON
+
+      - name: Build coverage tests
+        run: cmake --build build-nightly-coverage -j --target lbr_tests
+
+      - name: Run coverage tests
+        run: ctest --test-dir build-nightly-coverage --output-on-failure
+
+      - name: Generate coverage report
+        run: |
+          gcovr -r . \
+            --filter '^.*/src/' \
+            --exclude '^.*/build.*/_deps/' \
+            --xml-pretty -o build-nightly-coverage/coverage.xml \
+            --html-details -o build-nightly-coverage/coverage.html
+
+      - name: Upload nightly artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-linux-artifacts
+          path: |
+            build-nightly/docs/doxygen/html
+            build-nightly-coverage/coverage.xml
+            build-nightly-coverage/coverage.html
+
+  nightly-windows:
+    name: Nightly Windows Smoke
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-cmake
+
+      - name: Configure
+        shell: powershell
+        run: cmake --fresh --preset windows-ucrt-ninja
+
+      - name: Build tests
+        shell: powershell
+        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests
+
+      - name: Run tests
+        shell: powershell
+        run: ctest --preset windows-ucrt-ninja

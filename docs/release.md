@@ -6,6 +6,10 @@ Release workflow file:
 
 - [.github/workflows/release.yml](../.github/workflows/release.yml)
 
+Nightly validation workflow file:
+
+- [.github/workflows/nightly.yml](../.github/workflows/nightly.yml)
+
 ## Automatic Release (recommended)
 
 Create and push a semantic version tag:
@@ -42,3 +46,4 @@ You can run the `Release` workflow manually from GitHub Actions (`workflow_dispa
 - Use semantic tags (`vMAJOR.MINOR.PATCH`) for predictable automation.
 - Release binaries are built in `Release` mode.
 - Docs archive contains the generated Doxygen HTML tree.
+- Nightly runs are intended for broader regression coverage and early drift detection.
