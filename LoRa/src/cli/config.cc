@@ -34,8 +34,8 @@ namespace {
         return module_name == "sx1262" || module_name == "sx127";
     }
 
-    bool is_supported_lora_backend(const std::string &backend_name) {
-        return backend_name == "virtual" || backend_name == "hardware";
+    bool is_supported_lora_mode(const std::string &mode_name) {
+        return mode_name == "virtual" || mode_name == "hardware";
     }
 }
 
@@ -84,16 +84,16 @@ cli::ParseStatus cli::Config::parse(const Args &args) {
             continue;
         }
 
-        if (arg == "-b" || arg == "--lora-backend") {
+        if (arg == "-b" || arg == "--lora-mode") {
             if (i + 1 >= args.size()) {
                 std::cerr << "Missing value for option: " << arg << '\n';
                 usage(args.program_name());
                 return ParseStatus::ExitFailure;
             }
 
-            _settings.lora.backend = std::string(args.at(++i));
-            if (!is_supported_lora_backend(_settings.lora.backend)) {
-                std::cerr << "Unsupported LoRa backend: " << _settings.lora.backend << '\n';
+            _settings.lora.mode = std::string(args.at(++i));
+            if (!is_supported_lora_mode(_settings.lora.mode)) {
+                std::cerr << "Unsupported LoRa mode: " << _settings.lora.mode << '\n';
                 usage(args.program_name());
                 return ParseStatus::ExitFailure;
             }
@@ -126,7 +126,7 @@ void cli::Config::usage(std::string_view program_name) const {
               << "  -h, --help            Show this help message and exit\n"
               << "  -c, --config <file>   Path to configuration file\n"
               << "  -m, --lora-module <name>  LoRa module (sx1262 or sx127)\n"
-              << "  -b, --lora-backend <name> LoRa backend (virtual or hardware)\n"
+              << "  -b, --lora-mode <name> LoRa mode (virtual or hardware)\n"
               << "  -v, --verbose         Enable verbose output" << std::endl;
 }
 
@@ -199,8 +199,8 @@ bool cli::Config::parse_config_file(std::string &error_message) {
             if (!parse_optional_value(lora_node, "module", _settings.lora.module, error_message))
                 return false;
             if (!parse_optional_value(lora_node,
-                                      "backend",
-                                      _settings.lora.backend,
+                                      "mode",
+                                      _settings.lora.mode,
                                       error_message))
                 return false;
         }
@@ -221,8 +221,8 @@ bool cli::Config::parse_config_file(std::string &error_message) {
             error_message = "lora.module must be one of: sx1262, sx127.";
             return false;
         }
-        if (!is_supported_lora_backend(_settings.lora.backend)) {
-            error_message = "lora.backend must be one of: virtual, hardware.";
+        if (!is_supported_lora_mode(_settings.lora.mode)) {
+            error_message = "lora.mode must be one of: virtual, hardware.";
             return false;
         }
     } catch (const YAML::BadFile &e) {

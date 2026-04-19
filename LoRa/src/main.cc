@@ -28,9 +28,9 @@
 
 namespace {
     std::unique_ptr<periph::ILoRaModule> create_lora_module(const cli::LoRaSettings &settings) {
-        if (settings.backend == "hardware") {
+        if (settings.mode == "hardware") {
             throw std::runtime_error(
-                "Hardware LoRa backend is not implemented yet; use lora.backend=virtual.");
+            "Hardware LoRa mode is not implemented yet; use lora.mode=virtual.");
         }
 
         const std::string &module_name = settings.module;

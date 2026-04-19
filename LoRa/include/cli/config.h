@@ -28,7 +28,7 @@ namespace cli {
 
     struct LoRaSettings {
         std::string module = "sx1262";
-        std::string backend = "virtual";
+        std::string mode = "virtual";
     };
 
     struct RuntimeSettings {
