@@ -1,6 +1,6 @@
 /**
  * @file sx127_module.cc
- * @brief Virtual SX127 LoRa backend implementation
+ * @brief Virtual SX127 LoRa module implementation
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */

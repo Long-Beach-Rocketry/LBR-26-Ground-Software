@@ -5,7 +5,7 @@ Ground software skeleton for the Long Beach Rocketry station, organized under th
 ## What This Update Adds
 
 - A hardware abstraction interface: `periph::ILoRaModule`
-- Two interchangeable backend skeletons:
+- Two interchangeable radio module implementations:
   - `periph::SX1262Module`
   - `periph::SX127Module`
 - `SDRPipeline` now depends on the LoRa abstraction instead of concrete hardware
@@ -51,7 +51,7 @@ LoRa/
 
 ## Module Selection
 
-Choose LoRa backend with either:
+Choose LoRa module and mode with either:
 
 - CLI: `--lora-module sx1262` or `--lora-module sx127`
 - CLI: `--lora-mode virtual` or `--lora-mode hardware`
@@ -119,7 +119,7 @@ Run app:
 .\build\lbr_ground.exe --lora-module sx127 -v
 ```
 
-Hardware-in-the-loop smoke (real SX backend on bench):
+Hardware-in-the-loop smoke (real SX module on bench):
 
 ```powershell
 .\build\lbr_hil_runner.exe --module sx1262 --timeout-ms 5000 --min-bytes 1
@@ -164,9 +164,9 @@ Main project source reports are available in:
 - [build-coverage/coverage/sdr_pipeline.cc.gcov](../build-coverage/coverage/sdr_pipeline.cc.gcov)
 - [build-coverage/coverage/main.cc.gcov](../build-coverage/coverage/main.cc.gcov)
 
-## Current Backend State
+## Current Module State
 
-`SX1262Module` and `SX127Module` are virtual backends for development and CI. They exercise the pipeline contract with deterministic telemetry frames, while hardware-specific SPI/GPIO/radio register logic still remains to be added for production telemetry.
+`SX1262Module` and `SX127Module` are virtual modules for development and CI. They exercise the pipeline contract with deterministic telemetry frames, while hardware-specific SPI/GPIO/radio register logic still remains to be added for production telemetry.
 
 ## Connector
 

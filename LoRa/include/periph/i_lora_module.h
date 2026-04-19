@@ -39,7 +39,7 @@ namespace periph {
     };
 
     /**
-     * @brief Interface implemented by all LoRa radio backends.
+     * @brief Interface implemented by all LoRa radio modules.
      *
      * SDRPipeline depends on this abstraction to stay hardware-agnostic.
      */
@@ -48,7 +48,7 @@ namespace periph {
             virtual ~ILoRaModule() = default;
 
             /**
-             * @brief Initialize the LoRa radio backend.
+             * @brief Initialize the LoRa radio module.
              * @return Initialization status.
              */
             virtual LoRaStatusCode init() = 0;
@@ -57,12 +57,12 @@ namespace periph {
              * @brief Transmit a telemetry payload.
              * @param buf Pointer to payload bytes.
              * @param len Number of bytes to send.
-             * @return Transmit status and bytes written to radio backend.
+             * @return Transmit status and bytes written to the radio module.
              */
             virtual LoRaTransmitResult transmit(const uint8_t *buf, size_t len) = 0;
 
             /**
-             * @brief Receive telemetry bytes from the LoRa backend.
+             * @brief Receive telemetry bytes from the LoRa module.
              * @param buf Destination buffer.
              * @param max_len Capacity of destination buffer.
              * @param timeout_ms Maximum wait for a frame in milliseconds.

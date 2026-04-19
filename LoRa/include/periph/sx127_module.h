@@ -1,6 +1,6 @@
 /**
  * @file sx127_module.h
- * @brief Skeleton SX127 LoRa backend
+ * @brief Virtual SX127 LoRa module
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
@@ -14,7 +14,7 @@
 
 namespace periph {
     /**
-     * @brief Virtual SX127 backend used by the current pipeline.
+    * @brief Virtual SX127 module used by the current pipeline.
      */
     class SX127Module final : public ILoRaModule {
         public:

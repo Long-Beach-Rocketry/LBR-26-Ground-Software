@@ -1,6 +1,6 @@
 /**
  * @file sx1262_module.h
- * @brief Skeleton SX1262 LoRa backend
+ * @brief Virtual SX1262 LoRa module
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
@@ -14,7 +14,7 @@
 
 namespace periph {
     /**
-     * @brief Virtual SX1262 backend used by the current pipeline.
+    * @brief Virtual SX1262 module used by the current pipeline.
      */
     class SX1262Module final : public ILoRaModule {
         public:
