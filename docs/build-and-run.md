@@ -15,14 +15,16 @@ GoogleTest is also fetched automatically when `BUILD_TESTING=ON` (default).
 Recommended single command from repository root:
 
 ```powershell
-.\tools\build.ps1
+.\build.ps1
 ```
 
 Build only (skip tests):
 
 ```powershell
-.\tools\build.ps1 -SkipTests
+.\build.ps1 -SkipTests
 ```
+
+`build.ps1` forwards all arguments to `tools/build.ps1`.
 
 Equivalent manual commands:
 

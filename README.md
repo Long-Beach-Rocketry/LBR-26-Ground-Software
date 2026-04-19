@@ -72,14 +72,16 @@ From repository root:
 Single-command build + test (recommended):
 
 ```powershell
-.\tools\build.ps1
+.\build.ps1
 ```
 
 Build only (skip tests):
 
 ```powershell
-.\tools\build.ps1 -SkipTests
+.\build.ps1 -SkipTests
 ```
+
+The root script forwards to `tools/build.ps1` and keeps a stable one-command entrypoint.
 
 Manual equivalent:
 
