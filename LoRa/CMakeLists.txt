@@ -248,32 +248,33 @@ if(LBR_ENABLE_PROTOBUF_CODEGEN)
 
     set(LBR_PROTO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/docs/connector-message.proto)
     set(LBR_PROTO_OPTIONS ${CMAKE_CURRENT_SOURCE_DIR}/docs/connector-message.nanopb.options)
-    set(LBR_PROTO_GEN_DIR ${CMAKE_BINARY_DIR}/generated/proto)
+    set(LBR_PROTO_CPP_GEN_DIR ${CMAKE_BINARY_DIR}/generated/proto/cpp)
+    set(LBR_PROTO_NANOPB_GEN_DIR ${CMAKE_BINARY_DIR}/generated/proto/nanopb)
 
     add_custom_target(connector_proto_codegen
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${LBR_PROTO_GEN_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${LBR_PROTO_CPP_GEN_DIR}
         COMMAND ${PROTOC_EXECUTABLE}
             --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/docs
-            --cpp_out=${LBR_PROTO_GEN_DIR}
+            --cpp_out=${LBR_PROTO_CPP_GEN_DIR}
             ${LBR_PROTO_SRC}
         BYPRODUCTS
-            ${LBR_PROTO_GEN_DIR}/connector-message.pb.cc
-            ${LBR_PROTO_GEN_DIR}/connector-message.pb.h
+            ${LBR_PROTO_CPP_GEN_DIR}/connector-message.pb.cc
+            ${LBR_PROTO_CPP_GEN_DIR}/connector-message.pb.h
         COMMENT "Generating C++ protobuf sources for connector-message.proto"
         VERBATIM
     )
 
     add_custom_target(connector_nanopb_codegen
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${LBR_PROTO_GEN_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LBR_PROTO_OPTIONS} ${LBR_PROTO_GEN_DIR}/connector-message.options
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${LBR_PROTO_NANOPB_GEN_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LBR_PROTO_OPTIONS} ${LBR_PROTO_NANOPB_GEN_DIR}/connector-message.options
         COMMAND ${PROTOC_EXECUTABLE}
             --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/docs
             --plugin=protoc-gen-nanopb=${PROTOC_GEN_NANOPB_EXECUTABLE}
-            --nanopb_out=${LBR_PROTO_GEN_DIR}
+            --nanopb_out=${LBR_PROTO_NANOPB_GEN_DIR}
             ${LBR_PROTO_SRC}
         BYPRODUCTS
-            ${LBR_PROTO_GEN_DIR}/connector-message.pb.c
-            ${LBR_PROTO_GEN_DIR}/connector-message.pb.h
+            ${LBR_PROTO_NANOPB_GEN_DIR}/connector-message.pb.c
+            ${LBR_PROTO_NANOPB_GEN_DIR}/connector-message.pb.h
         COMMENT "Generating nanopb sources for connector-message.proto"
         VERBATIM
     )
