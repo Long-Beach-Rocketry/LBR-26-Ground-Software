@@ -24,9 +24,16 @@
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 
 namespace {
-    std::unique_ptr<periph::ILoRaModule> create_lora_module(const std::string &module_name) {
+    std::unique_ptr<periph::ILoRaModule> create_lora_module(const cli::LoRaSettings &settings) {
+        if (settings.backend == "hardware") {
+            throw std::runtime_error(
+                "Hardware LoRa backend is not implemented yet; use lora.backend=virtual.");
+        }
+
+        const std::string &module_name = settings.module;
         if (module_name == "sx127")
             return std::make_unique<periph::SX127Module>();
 
@@ -60,11 +67,10 @@ int main(int argc, char * const argv[]) {
             break;
     }
 
-    std::unique_ptr<periph::ILoRaModule> lora_module =
-        create_lora_module(config.settings().lora.module);
-    SDRPipeline pipeline(config.settings(), *lora_module);
-
     try {
+        std::unique_ptr<periph::ILoRaModule> lora_module =
+            create_lora_module(config.settings().lora);
+        SDRPipeline pipeline(config.settings(), *lora_module);
         pipeline.run();
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
