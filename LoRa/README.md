@@ -162,7 +162,7 @@ Main project source reports are available in:
 
 ## Current Backend State
 
-`SX1262Module` and `SX127Module` are intentionally skeletal backends. They compile and integrate with the pipeline contract but still need hardware-specific SPI/GPIO/radio register logic for production telemetry.
+`SX1262Module` and `SX127Module` are virtual backends for development and CI. They exercise the pipeline contract with deterministic telemetry frames, while hardware-specific SPI/GPIO/radio register logic still remains to be added for production telemetry.
 
 ## Connector
 
@@ -172,6 +172,8 @@ The implementation lives under [include/connector](include/connector) and [src/c
 
 Short version:
 
-- Preferred transport: local socket for live data exchange.
+- Telemetry live path: local UDP for low-latency reception.
+- Back/front control path: local TCP for ordered exchanges.
+- Back/front fan-out: ZeroMQ when the build enables it.
 - Fallback transport: file-based replay for offline testing and debugging.
 - The transport layer is intentionally separate from the LoRa module abstraction so the other team can implement it without changing the pipeline contract.

@@ -9,9 +9,12 @@
 
 #include "periph/i_lora_module.h"
 
+#include <deque>
+#include <vector>
+
 namespace periph {
     /**
-     * @brief SX1262 placeholder implementation used by the current pipeline.
+     * @brief Virtual SX1262 backend used by the current pipeline.
      */
     class SX1262Module final : public ILoRaModule {
         public:
@@ -21,5 +24,7 @@ namespace periph {
 
         private:
             bool _initialized = false;
+            bool _default_frame_emitted = false;
+            std::deque<std::vector<std::uint8_t>> _pending_frames;
     };
 }

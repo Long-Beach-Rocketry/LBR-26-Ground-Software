@@ -12,22 +12,19 @@ The code implementation lives under:
 
 ## Recommendation
 
-Use a local socket transport for live communication.
+Use the transport that matches the traffic pattern.
 
-Reasoning:
+Recommended split for this repository:
 
-- It keeps data exchange explicit and low-latency.
-- It works well for streaming telemetry frames.
-- It avoids file polling and partial-write ambiguity.
-- It stays usable on the same machine without exposing a network service.
+- Telemetry live path: local UDP.
+- Back/front control or ordered exchange: local TCP.
+- Back/front fan-out or PUB/SUB: ZeroMQ when built with `-DLBR_ENABLE_ZEROMQ=ON`.
 
-Recommended implementation choice:
+Why this split:
 
-- On Windows: localhost TCP or a named pipe.
-- On Unix-like systems: localhost TCP or a Unix domain socket.
-
-For low-latency telemetry where producer backpressure must never stall capture,
-prefer local UDP with bounded receive timeouts.
+- UDP keeps capture low-latency and avoids producer backpressure.
+- TCP preserves ordering and delivery when the front side needs a stable stream.
+- ZeroMQ gives a cleaner adapter boundary when multiple consumers need the same feed.
 
 Implementation note in this repository:
 
@@ -35,7 +32,7 @@ Implementation note in this repository:
 - `LocalTcpTransport` remains available for ordered stream semantics.
 - `LocalZmqTransport` is available for PUB/SUB patterns when built with `-DLBR_ENABLE_ZEROMQ=ON`.
 
-If the consumer side already has a preference, keep the transport behind a small adapter so the pipeline contract does not change.
+Keep the transport behind a small adapter so the pipeline contract does not change.
 
 ## File Transport Fallback
 
