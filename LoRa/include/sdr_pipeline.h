@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_SDR_PIPELINE_H_
+#define LORA_INCLUDE_SDR_PIPELINE_H_
 
 #include "cli/config.h"
 #include "periph/i_lora_module.h"
@@ -28,3 +29,5 @@ class SDRPipeline {
         cli::RuntimeSettings _settings;
         periph::ILoRaModule &_lora_module;
 };
+
+    #endif  // LORA_INCLUDE_SDR_PIPELINE_H_

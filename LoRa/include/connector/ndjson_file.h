@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_CONNECTOR_NDJSON_FILE_H_
+#define LORA_INCLUDE_CONNECTOR_NDJSON_FILE_H_
 
 #include "connector/message.h"
 
@@ -62,3 +63,5 @@ namespace connector {
             std::string _line_buffer;
     };
 }
+
+#endif  // LORA_INCLUDE_CONNECTOR_NDJSON_FILE_H_

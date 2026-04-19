@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_PERIPH_I_LORA_MODULE_H_
+#define LORA_INCLUDE_PERIPH_I_LORA_MODULE_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -71,3 +72,5 @@ namespace periph {
             virtual LoRaReceiveResult receive(uint8_t *buf, size_t max_len, uint32_t timeout_ms) = 0;
     };
 }
+
+#endif  // LORA_INCLUDE_PERIPH_I_LORA_MODULE_H_

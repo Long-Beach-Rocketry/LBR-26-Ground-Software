@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_CONNECTOR_MESSAGE_H_
+#define LORA_INCLUDE_CONNECTOR_MESSAGE_H_
 
 #include <cstdint>
 #include <map>
@@ -68,3 +69,5 @@ namespace connector {
         static ConnectorMessage from_json(const std::string &json_text);
     };
 }
+
+#endif  // LORA_INCLUDE_CONNECTOR_MESSAGE_H_

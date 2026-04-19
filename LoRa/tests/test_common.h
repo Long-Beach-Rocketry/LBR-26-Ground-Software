@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_TESTS_TEST_COMMON_H_
+#define LORA_TESTS_TEST_COMMON_H_
 
 #include "cli/args.h"
 
@@ -77,3 +78,5 @@ namespace tests {
         return buffer.str();
     }
 }
+
+#endif  // LORA_TESTS_TEST_COMMON_H_
