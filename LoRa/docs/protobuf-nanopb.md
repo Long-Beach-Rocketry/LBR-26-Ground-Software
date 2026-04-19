@@ -28,7 +28,8 @@ Generate nanopb sources (embedded side):
 
 Generated files are written to:
 
-- `build/generated/proto`
+- `build/generated/proto/cpp`
+- `build/generated/proto/nanopb`
 
 ## Notes
 
