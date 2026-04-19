@@ -64,7 +64,7 @@ TEST(ConfigTests, All) {
             "  gain_db: 12\n"
             "lora:\n"
             "  module: \"sx127\"\n"
-            "  backend: \"virtual\"\n"
+            "  mode: \"virtual\"\n"
             "pipeline:\n"
             "  verbose: false\n"
             "  interpret_telemetry: false\n"
@@ -79,24 +79,24 @@ TEST(ConfigTests, All) {
         EXPECT_EQ(config.settings().sdr.center_freq_hz, 915000000);
         EXPECT_EQ(config.settings().sdr.gain_db, 12);
         EXPECT_EQ(config.settings().lora.module, std::string("sx127"));
-        EXPECT_EQ(config.settings().lora.backend, std::string("virtual"));
+        EXPECT_EQ(config.settings().lora.mode, std::string("virtual"));
         EXPECT_EQ(config.settings().pipeline.output_path, std::string("telemetry.bin"));
         EXPECT_FALSE(config.settings().pipeline.verbose);
         EXPECT_FALSE(config.settings().pipeline.interpret_telemetry);
     }
 
     {
-        tests::ArgvBuilder builder({"app.exe", "--lora-backend", "virtual"});
+        tests::ArgvBuilder builder({"app.exe", "--lora-mode", "virtual"});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::Ok);
-        EXPECT_EQ(config.settings().lora.backend, std::string("virtual"));
+        EXPECT_EQ(config.settings().lora.mode, std::string("virtual"));
     }
 
     {
-        tests::ArgvBuilder builder({"app.exe", "--lora-backend", "hardware"});
+        tests::ArgvBuilder builder({"app.exe", "--lora-mode", "hardware"});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::Ok);
-        EXPECT_EQ(config.settings().lora.backend, std::string("hardware"));
+        EXPECT_EQ(config.settings().lora.mode, std::string("hardware"));
     }
 
     {
@@ -113,7 +113,7 @@ TEST(ConfigTests, All) {
     }
 
     {
-        tests::ArgvBuilder builder({"app.exe", "--lora-backend", "bad"});
+        tests::ArgvBuilder builder({"app.exe", "--lora-mode", "bad"});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
     }
@@ -227,7 +227,7 @@ TEST(ConfigTests, All) {
     }
 
     {
-        tests::ScopedTempFile file("lora:\n  backend: [virtual]\n");
+        tests::ScopedTempFile file("lora:\n  mode: [virtual]\n");
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);
@@ -262,7 +262,7 @@ TEST(ConfigTests, All) {
     }
 
     {
-        tests::ScopedTempFile file("lora:\n  backend: \"invalid\"\n");
+        tests::ScopedTempFile file("lora:\n  mode: \"invalid\"\n");
         tests::ArgvBuilder builder({"app.exe", "-c", file.path().string()});
         cli::Config config;
         EXPECT_EQ(parse_silent(config, builder.build()), cli::ParseStatus::ExitFailure);

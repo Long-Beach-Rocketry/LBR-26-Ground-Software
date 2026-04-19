@@ -8,7 +8,7 @@ sdr:
 
 lora:
   module: "sx1262"
-  backend: "virtual"
+  mode: "virtual"
 
 pipeline:
   verbose: true
