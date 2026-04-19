@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_TELEMETRY_INTERPRETER_H_
+#define LORA_INCLUDE_TELEMETRY_INTERPRETER_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -28,3 +29,5 @@ namespace telemetry {
             static DecodedTelemetry decode(const uint8_t *payload, size_t payload_len);
     };
 }
+
+#endif  // LORA_INCLUDE_TELEMETRY_INTERPRETER_H_

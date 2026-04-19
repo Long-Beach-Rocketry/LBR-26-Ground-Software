@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_CLI_ARGS_H_
+#define LORA_INCLUDE_CLI_ARGS_H_
 
 #include <cstddef>
 #include <string_view>
@@ -45,3 +46,5 @@ namespace cli {
             std::vector<std::string_view> _values;
     };
 }
+
+#endif  // LORA_INCLUDE_CLI_ARGS_H_

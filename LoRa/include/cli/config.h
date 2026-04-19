@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_CLI_CONFIG_H_
+#define LORA_INCLUDE_CLI_CONFIG_H_
 
 #include "cli/args.h"
 
@@ -89,3 +90,5 @@ namespace cli {
             RuntimeSettings _settings;
     };
 }
+
+#endif  // LORA_INCLUDE_CLI_CONFIG_H_

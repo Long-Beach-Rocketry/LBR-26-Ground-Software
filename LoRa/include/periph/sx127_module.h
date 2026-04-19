@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_PERIPH_SX127_MODULE_H_
+#define LORA_INCLUDE_PERIPH_SX127_MODULE_H_
 
 #include "periph/i_lora_module.h"
 
@@ -28,3 +29,5 @@ namespace periph {
             std::deque<std::vector<std::uint8_t>> _pending_frames;
     };
 }
+
+#endif  // LORA_INCLUDE_PERIPH_SX127_MODULE_H_

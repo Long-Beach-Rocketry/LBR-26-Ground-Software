@@ -5,7 +5,8 @@
  * @note Origin: Long Beach Rocketry
  */
 
-#pragma once
+#ifndef LORA_INCLUDE_CONNECTOR_LOCAL_TCP_TRANSPORT_H_
+#define LORA_INCLUDE_CONNECTOR_LOCAL_TCP_TRANSPORT_H_
 
 #include <cstdint>
 #include <string>
@@ -101,3 +102,5 @@ namespace connector {
 #endif
     };
 }
+
+#endif  // LORA_INCLUDE_CONNECTOR_LOCAL_TCP_TRANSPORT_H_
