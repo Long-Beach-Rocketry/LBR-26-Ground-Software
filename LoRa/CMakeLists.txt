@@ -193,6 +193,13 @@ target_link_libraries(lbr_ground PRIVATE sdr_pipeline lora_periph)
 lbr_enable_coverage(lbr_ground)
 lbr_copy_gnu_runtime_dlls(lbr_ground)
 
+add_executable(lbr_hil_runner
+    src/hil_runner.cc
+)
+target_link_libraries(lbr_hil_runner PRIVATE lora_periph)
+lbr_enable_coverage(lbr_hil_runner)
+lbr_copy_gnu_runtime_dlls(lbr_hil_runner)
+
 if(BUILD_TESTING)
     include(GoogleTest)
 

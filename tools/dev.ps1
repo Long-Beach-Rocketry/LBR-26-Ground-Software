@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("help", "build", "build-only", "test", "sanity", "format", "tidy", "docs", "docs-pdf", "coverage", "proto", "nanopb")]
+    [ValidateSet("help", "build", "build-only", "test", "sanity", "format", "tidy", "docs", "docs-pdf", "coverage", "proto", "nanopb", "hil")]
     [string]$Command = "help"
 )
 
@@ -38,6 +38,7 @@ function Show-Help {
     Write-Host "  coverage    Configure and build coverage target"
     Write-Host "  proto       Generate C++ protobuf sources"
     Write-Host "  nanopb      Generate nanopb sources"
+    Write-Host "  hil         Build HIL runner and print real bench command"
 }
 
 switch ($Command) {
@@ -123,6 +124,20 @@ switch ($Command) {
         Invoke-Step -Name "Generate connector nanopb sources" -Action {
             cmake --build build --target connector_nanopb_codegen
         }
+    }
+
+    "hil" {
+        Invoke-Step -Name "Configure preset 'windows-ucrt-ninja'" -Action {
+            cmake --preset windows-ucrt-ninja
+        }
+
+        Invoke-Step -Name "Build HIL runner" -Action {
+            cmake --build --preset windows-ucrt-ninja --target lbr_hil_runner
+        }
+
+        Write-Host "Run on bench:" -ForegroundColor Yellow
+        Write-Host "  .\\build\\lbr_hil_runner.exe --module sx1262 --timeout-ms 5000 --min-bytes 1"
+        Write-Host "  .\\build\\lbr_hil_runner.exe --module sx127 --timeout-ms 5000 --min-bytes 1"
     }
 
     default {
