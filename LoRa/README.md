@@ -54,14 +54,18 @@ LoRa/
 Choose LoRa backend with either:
 
 - CLI: `--lora-module sx1262` or `--lora-module sx127`
+- CLI: `--lora-backend virtual` or `--lora-backend hardware`
 - YAML:
 
 ```yaml
 lora:
   module: "sx1262"
+  backend: "virtual"
 ```
 
-The CLI option overrides defaults and is validated.
+The CLI options override defaults and are validated.
+
+`virtual` is the default backend and is the one that runs in CI. `hardware` is reserved for the future real radio drivers and currently fails fast with a clear message.
 
 ## Build And Run
 
