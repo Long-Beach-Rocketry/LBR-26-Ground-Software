@@ -125,6 +125,6 @@ but this does not change the connector contract and does not replace consumer-si
 
 ## Notes For The Other Team
 
-If they need to change transport later, they should replace only the connector adapter, not the pipeline or radio backends.
+If they need to change transport later, they should replace only the connector adapter, not the pipeline or radio modules.
 
 The formal schema is in [connector-message.schema.json](connector-message.schema.json).

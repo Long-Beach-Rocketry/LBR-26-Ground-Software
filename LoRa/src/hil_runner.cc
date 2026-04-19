@@ -1,6 +1,6 @@
 /**
  * @file hil_runner.cc
- * @brief Hardware-in-the-loop runner for real LoRa backend validation
+ * @brief Hardware-in-the-loop runner for real LoRa module validation
  */
 
 #include "periph/i_lora_module.h"

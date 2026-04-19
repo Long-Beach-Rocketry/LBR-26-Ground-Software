@@ -1,6 +1,6 @@
 /**
  * @file sx1262_module.cc
- * @brief Virtual SX1262 LoRa backend implementation
+ * @brief Virtual SX1262 LoRa module implementation
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
