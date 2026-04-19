@@ -28,7 +28,7 @@ jobs:
         run: cmake --preset linux-ninja-release
 
       - name: Build
-        run: cmake --build --preset linux-ninja-release --target lbr_tests
+        run: cmake --build --preset linux-ninja-release --target lbr_tests lbr_ground
 
       - name: Run tests
         run: ctest --preset linux-ninja-release
@@ -100,7 +100,7 @@ jobs:
         run: cmake --preset linux-ninja-coverage
 
       - name: Build (coverage)
-        run: cmake --build --preset linux-ninja-coverage --target lbr_tests
+        run: cmake --build --preset linux-ninja-coverage --target lbr_tests lbr_ground
 
       - name: Run tests (coverage)
         run: ctest --preset linux-ninja-coverage
@@ -177,7 +177,7 @@ jobs:
 
       - name: Build
         shell: powershell
-        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests
+        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests lbr_ground
 
       - name: Test
         shell: powershell
