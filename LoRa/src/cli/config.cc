@@ -168,16 +168,16 @@ bool cli::Config::parse_config_file(std::string &error_message) {
                 return false;
         }
 
-            const YAML::Node lora_node = root["lora"];
-            if (lora_node) {
-                if (!lora_node.IsMap()) {
-                    error_message = "Node 'lora' must be a map.";
-                    return false;
-                }
-
-                if (!parse_optional_value(lora_node, "module", _settings.lora.module, error_message))
-                    return false;
+        const YAML::Node lora_node = root["lora"];
+        if (lora_node) {
+            if (!lora_node.IsMap()) {
+                error_message = "Node 'lora' must be a map.";
+                return false;
             }
+
+            if (!parse_optional_value(lora_node, "module", _settings.lora.module, error_message))
+                return false;
+        }
 
         if (_settings.sdr.sample_rate_hz <= 0) {
             error_message = "sdr.sample_rate_hz must be > 0.";

@@ -26,13 +26,7 @@ Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x 
 ```text
 LoRa/
   include/
-Keyword interface (recommended):
-
-```powershell
-.\dev.ps1 build
-```
     cli/
-Legacy direct entrypoint:
       config.h
     periph/
       i_lora_module.h
@@ -41,9 +35,15 @@ Legacy direct entrypoint:
     sdr_pipeline.h
   src/
     cli/
-.\dev.ps1 build-only
       config.cc
     periph/
+      sx1262_module.cc
+      sx127_module.cc
+    connector/
+      message.cc
+      local_tcp_transport.cc
+      local_udp_transport.cc
+      local_zmq_transport.cc
     pipeline_tests.cc
   config.demo.yaml
   CMakeLists.txt

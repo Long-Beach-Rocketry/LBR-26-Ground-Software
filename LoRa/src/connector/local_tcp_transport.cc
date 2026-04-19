@@ -8,6 +8,7 @@
 #include "connector/local_tcp_transport.h"
 
 #include <chrono>
+#include <cerrno>
 #include <cstring>
 #include <stdexcept>
 #include <thread>
@@ -21,7 +22,9 @@
     #pragma comment(lib, "Ws2_32.lib")
 #else
     #include <arpa/inet.h>
+    #include <fcntl.h>
     #include <netdb.h>
+    #include <sys/select.h>
     #include <sys/socket.h>
     #include <unistd.h>
 #endif
@@ -35,6 +38,53 @@ namespace {
     void close_socket(NativeSocket socket_handle) {
         if (socket_handle != invalid_socket_value)
             ::closesocket(socket_handle);
+    }
+
+    bool set_nonblocking(NativeSocket socket_handle, bool nonblocking) {
+        u_long mode = nonblocking ? 1UL : 0UL;
+        return ::ioctlsocket(socket_handle, FIONBIO, &mode) == 0;
+    }
+
+    bool connect_in_progress_error() {
+        const int error = ::WSAGetLastError();
+        return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS || error == WSAEALREADY;
+    }
+
+    bool connect_with_timeout(NativeSocket socket_handle,
+                              const sockaddr_in &address,
+                              int timeout_ms) {
+        if (::connect(socket_handle,
+                      reinterpret_cast<const sockaddr *>(&address),
+                      static_cast<int>(sizeof(address))) == 0) {
+            return true;
+        }
+
+        if (!connect_in_progress_error())
+            return false;
+
+        fd_set write_fds;
+        FD_ZERO(&write_fds);
+        FD_SET(socket_handle, &write_fds);
+
+        timeval timeout {};
+        timeout.tv_sec = timeout_ms / 1000;
+        timeout.tv_usec = (timeout_ms % 1000) * 1000;
+
+        const int ready = ::select(0, nullptr, &write_fds, nullptr, &timeout);
+        if (ready <= 0)
+            return false;
+
+        int socket_error = 0;
+        int socket_error_len = static_cast<int>(sizeof(socket_error));
+        if (::getsockopt(socket_handle,
+                         SOL_SOCKET,
+                         SO_ERROR,
+                         reinterpret_cast<char *>(&socket_error),
+                         &socket_error_len) != 0) {
+            return false;
+        }
+
+        return socket_error == 0;
     }
 
     // Initialize Winsock once per process.
@@ -57,6 +107,56 @@ namespace {
     void close_socket(NativeSocket socket_handle) {
         if (socket_handle != invalid_socket_value)
             ::close(socket_handle);
+    }
+
+    bool set_nonblocking(NativeSocket socket_handle, bool nonblocking) {
+        const int flags = ::fcntl(socket_handle, F_GETFL, 0);
+        if (flags < 0)
+            return false;
+
+        const int updated_flags = nonblocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+        return ::fcntl(socket_handle, F_SETFL, updated_flags) == 0;
+    }
+
+    bool connect_in_progress_error() {
+        return errno == EINPROGRESS || errno == EWOULDBLOCK;
+    }
+
+    bool connect_with_timeout(NativeSocket socket_handle,
+                              const sockaddr_in &address,
+                              int timeout_ms) {
+        if (::connect(socket_handle,
+                      reinterpret_cast<const sockaddr *>(&address),
+                      static_cast<int>(sizeof(address))) == 0) {
+            return true;
+        }
+
+        if (!connect_in_progress_error())
+            return false;
+
+        fd_set write_fds;
+        FD_ZERO(&write_fds);
+        FD_SET(socket_handle, &write_fds);
+
+        timeval timeout {};
+        timeout.tv_sec = timeout_ms / 1000;
+        timeout.tv_usec = (timeout_ms % 1000) * 1000;
+
+        const int ready = ::select(socket_handle + 1, nullptr, &write_fds, nullptr, &timeout);
+        if (ready <= 0)
+            return false;
+
+        int socket_error = 0;
+        socklen_t socket_error_len = sizeof(socket_error);
+        if (::getsockopt(socket_handle,
+                         SOL_SOCKET,
+                         SO_ERROR,
+                         reinterpret_cast<char *>(&socket_error),
+                         &socket_error_len) != 0) {
+            return false;
+        }
+
+        return socket_error == 0;
     }
 #endif
 
@@ -134,17 +234,25 @@ void connector::LocalTcpTransport::open() {
         if (_socket == invalid_socket_value)
             throw std::runtime_error("Failed to create client socket.");
 
-        for (int attempt = 0; attempt < 50; ++attempt) {
-            if (::connect(_socket,
-                          reinterpret_cast<const sockaddr *>(&address),
-                          static_cast<int>(sizeof(address))) == 0) {
+        if (!set_nonblocking(_socket, true)) {
+            close();
+            throw std::runtime_error("Failed to configure non-blocking client socket.");
+        }
+
+        for (int attempt = 0; attempt < 20; ++attempt) {
+            if (connect_with_timeout(_socket, address, 150)) {
                 break;
             }
-            if (attempt == 49) {
+            if (attempt == 19) {
                 close();
                 throw std::runtime_error("Failed to connect local TCP transport.");
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+
+        if (!set_nonblocking(_socket, false)) {
+            close();
+            throw std::runtime_error("Failed to restore blocking mode on client socket.");
         }
     }
 
