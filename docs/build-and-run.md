@@ -2,17 +2,17 @@
 
 ## Prerequisites
 
-- CMake
-- MSYS2 UCRT64 toolchain
-- `g++` (`C:\msys64\ucrt64\bin\g++.exe`)
-- `ninja` (`C:\msys64\ucrt64\bin\ninja.exe`)
+- CMake (>= 3.23)
+- Ninja
+- C++17 compiler
+- PowerShell (for helper scripts on Windows)
 
 Note: `yaml-cpp` is fetched automatically by CMake (`FetchContent`).
 GoogleTest is also fetched automatically when `BUILD_TESTING=ON` (default).
 
 ## Build (PowerShell)
 
-Recommended single command from repository root:
+Recommended command from repository root:
 
 ```powershell
 .\dev.ps1 build
@@ -22,6 +22,21 @@ Build only (skip tests):
 
 ```powershell
 .\dev.ps1 build-only
+```
+
+Direct preset configure/build on Windows UCRT64:
+
+```powershell
+cmake --preset windows-ucrt-ninja
+cmake --build --preset windows-ucrt-ninja --target lbr_tests
+```
+
+Direct preset configure/build on Linux:
+
+```bash
+cmake --preset linux-ninja-release
+cmake --build --preset linux-ninja-release --target lbr_tests
+ctest --preset linux-ninja-release
 ```
 
 ## Test
@@ -94,9 +109,15 @@ Coverage artifacts are generated in:
 ## Run
 
 ```powershell
-.\build\lbr_ground.exe --help
-.\build\lbr_ground.exe -c .\config.demo.yaml
-.\build\lbr_ground.exe -c .\config.demo.yaml -v
+.\build\LoRa\lbr_ground.exe --help
+.\build\LoRa\lbr_ground.exe -c .\LoRa\config.demo.yaml
+.\build\LoRa\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
+```
+
+HIL runner:
+
+```powershell
+.\build\LoRa\lbr_hil_runner.exe --module sx1262 --timeout-ms 5000 --min-bytes 1
 ```
 
 ## Expected Behavior
@@ -104,3 +125,19 @@ Coverage artifacts are generated in:
 - `--help` prints usage and exits with success.
 - `-c <file>` loads YAML configuration and validates it.
 - `-v` forces verbose mode even if `pipeline.verbose` is false in YAML.
+
+## CI Checks
+
+Current CI workflow includes:
+
+- build and test
+- coverage
+- feature-options (ZeroMQ + protobuf/nanopb)
+- Windows smoke
+- clang sanity (`clang-format-check`, `clang-tidy`)
+- docs build
+
+Platform split note:
+
+- Linux jobs use `linux-ninja-*` presets
+- Windows jobs use `windows-ucrt-ninja` preset

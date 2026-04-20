@@ -7,6 +7,39 @@
   },
   "configurePresets": [
     {
+      "name": "linux-ninja-release",
+      "displayName": "Linux Ninja Release",
+      "description": "Linux release configuration with Ninja.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-ninja-coverage",
+      "displayName": "Linux Ninja Coverage",
+      "description": "Linux debug configuration with coverage enabled.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-linux-coverage",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LBR_ENABLE_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "linux-ninja-feature-options",
+      "displayName": "Linux Ninja Feature Options",
+      "description": "Linux release configuration with optional ZeroMQ and protobuf codegen enabled.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-linux-features",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LBR_ENABLE_ZEROMQ": "ON",
+        "LBR_ENABLE_PROTOBUF_CODEGEN": "ON"
+      }
+    },
+    {
       "name": "windows-ucrt-ninja",
       "displayName": "Windows UCRT64 + Ninja",
       "description": "Configure with MSYS2 UCRT64 GCC and Ninja, with PATH adjusted for compiler runtime tools.",
@@ -23,6 +56,18 @@
   ],
   "buildPresets": [
     {
+      "name": "linux-ninja-release",
+      "configurePreset": "linux-ninja-release"
+    },
+    {
+      "name": "linux-ninja-coverage",
+      "configurePreset": "linux-ninja-coverage"
+    },
+    {
+      "name": "linux-ninja-feature-options",
+      "configurePreset": "linux-ninja-feature-options"
+    },
+    {
       "name": "windows-ucrt-ninja",
       "configurePreset": "windows-ucrt-ninja",
       "environment": {
@@ -31,6 +76,27 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "linux-ninja-release",
+      "configurePreset": "linux-ninja-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-ninja-coverage",
+      "configurePreset": "linux-ninja-coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-ninja-feature-options",
+      "configurePreset": "linux-ninja-feature-options",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
     {
       "name": "windows-ucrt-ninja",
       "configurePreset": "windows-ucrt-ninja",

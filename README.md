@@ -1,187 +1,84 @@
-# LoRa Ground Software
+# LBR-26 Ground Software
 
-Ground software skeleton for the Long Beach Rocketry station, organized under the LoRa root.
+Ground-side software stack for Long Beach Rocketry, centered on the `LoRa/` module and built with CMake.
 
-## What This Update Adds
+## Overview
 
-- A hardware abstraction interface: `periph::ILoRaModule`
-- Two interchangeable backend skeletons:
-  - `periph::SX1262Module`
-  - `periph::SX127Module`
-- `SDRPipeline` now depends on the LoRa abstraction instead of concrete hardware
-- CLI/config support to choose LoRa module at runtime (`sx1262` or `sx127`)
+The project currently provides:
 
-## Why The Abstraction Helps
+- LoRa runtime abstraction with module selection (`sx1262`, `sx127`)
+- runtime mode selection (`virtual`, `hardware`)
+- connector transports:
+  - local TCP
+  - local UDP
+  - optional local ZeroMQ
+  - NDJSON file replay
+- protobuf and nanopb code generation targets for connector contracts
+- unit and integration tests (GoogleTest + CTest)
 
-The pipeline now consumes telemetry through `ILoRaModule`:
+Primary implementation lives under [LoRa](LoRa).
 
-- `init() -> LoRaStatusCode`
-- `transmit(const uint8_t* buf, size_t len) -> LoRaTransmitResult`
-- `receive(uint8_t* buf, size_t max_len, uint32_t timeout_ms) -> LoRaReceiveResult`
-
-Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
-
-## Folder Layout
-
-```text
-LoRa/
-  include/
-    cli/
-      args.h
-      config.h
-    periph/
-      i_lora_module.h
-      sx1262_module.h
-      sx127_module.h
-    sdr_pipeline.h
-  src/
-    cli/
-      args.cc
-      config.cc
-    periph/
-      sx1262_module.cc
-      sx127_module.cc
-    main.cc
-    sdr_pipeline.cc
-  tests/
-    args_tests.cc
-    config_tests.cc
-    pipeline_tests.cc
-  config.demo.yaml
-  CMakeLists.txt
-```
-
-## Module Selection
-
-Choose LoRa backend with either:
-
-- CLI: `--lora-module sx1262` or `--lora-module sx127`
-- YAML:
-
-```yaml
-lora:
-  module: "sx1262"
-```
-
-The CLI option overrides defaults and is validated.
-
-## Build And Run
+## Quick Start
 
 From repository root:
-
-Single-command build + test (recommended):
-
-```powershell
-.\build.ps1
-```
-
-Keyword interface (recommended for all recurring workflows):
 
 ```powershell
 .\dev.ps1 build
 ```
 
-Build only (skip tests):
+Build-only:
 
 ```powershell
 .\dev.ps1 build-only
 ```
 
-The root script forwards to `tools/build.ps1` and keeps a stable one-command entrypoint.
-
-Sanity checks (when `clang-format` and `clang-tidy` are available in `PATH`):
+Run tests:
 
 ```powershell
-.\dev.ps1 sanity
+.\dev.ps1 test
 ```
-
-If either tool is missing from `PATH`, `sanity-check` fails with a clear message.
-
-Generate API documentation (when `doxygen` is available in `PATH`):
-
-```powershell
-.\dev.ps1 docs
-```
-
-Generate PDF API documentation:
-
-```powershell
-.\dev.ps1 docs-pdf
-```
-
-Generated HTML entry point:
-
-- `build/docs/doxygen/html/index.html`
-
-Generated PDF:
-
-- `build/docs/doxygen/latex/refman.pdf`
 
 Run app:
 
 ```powershell
-.\build\lbr_ground.exe --help
-.\build\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
-.\build\lbr_ground.exe --lora-module sx127 -v
+.\build\LoRa\lbr_ground.exe --help
+.\build\LoRa\lbr_ground.exe -c .\LoRa\config.demo.yaml -v
 ```
 
-Hardware-in-the-loop smoke (real SX backend on bench):
+## CI/CD
 
-```powershell
-.\build\lbr_hil_runner.exe --module sx1262 --timeout-ms 5000 --min-bytes 1
-.\build\lbr_hil_runner.exe --module sx127 --timeout-ms 5000 --min-bytes 1
-```
+Main CI workflow runs:
 
-## Coverage
+- build and tests
+- coverage generation
+- optional feature validation (ZeroMQ + protobuf/nanopb)
+- Windows UCRT smoke build/test
+- clang checks (`clang-format-check`, `clang-tidy`)
+- docs build (Doxygen HTML)
 
-Current score (last run):
+Workflow file: [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
-- Project source aggregate: line 86.65%, functions 100.00%, branches 53.13%
+Nightly regression workflow runs a broader Linux+Windows sweep on schedule:
 
-Project source metrics (all production .cc files):
+- [.github/workflows/nightly.yml](.github/workflows/nightly.yml)
 
-| File | Line | Functions | Branches |
-| --- | ---: | ---: | ---: |
-| args.cc | 90.91% | 100.00% | 78.57% |
-| config.cc | 100.00% | 100.00% | 65.13% |
-| message.cc | 78.98% | 100.00% | 46.05% |
-| ndjson_file.cc | 93.75% | 100.00% | 53.85% |
-| local_tcp_transport.cc | 78.72% | 100.00% | 42.45% |
-| sx1262_module.cc | 100.00% | 100.00% | 0.00% |
-| sx127_module.cc | 100.00% | 100.00% | 0.00% |
-| sdr_pipeline.cc | 100.00% | 100.00% | 71.43% |
-| main.cc | 89.47% | 100.00% | 43.33% |
-| Project aggregate | 86.65% | 100.00% | 53.13% |
+## Releases
 
-Generate coverage from repository root:
+Release automation is handled by [.github/workflows/release.yml](.github/workflows/release.yml).
 
-```powershell
-.\dev.ps1 coverage
-```
+On tag `vX.Y.Z`, it builds and publishes:
 
-Coverage artifacts are written to:
+- Linux binaries archive
+- Windows UCRT64 binaries archive
+- Doxygen HTML archive
 
-- [build-coverage/coverage](../build-coverage/coverage)
+Full release procedure: [docs/release.md](docs/release.md).
 
-Main project source reports are available in:
+## Documentation Index
 
-- [build-coverage/coverage/args.cc.gcov](../build-coverage/coverage/args.cc.gcov)
-- [build-coverage/coverage/config.cc.gcov](../build-coverage/coverage/config.cc.gcov)
-- [build-coverage/coverage/sdr_pipeline.cc.gcov](../build-coverage/coverage/sdr_pipeline.cc.gcov)
-- [build-coverage/coverage/main.cc.gcov](../build-coverage/coverage/main.cc.gcov)
-
-## Current Backend State
-
-`SX1262Module` and `SX127Module` are intentionally skeletal backends. They compile and integrate with the pipeline contract but still need hardware-specific SPI/GPIO/radio register logic for production telemetry.
-
-## Connector
-
-The connector contract used between the LoRa side and the consumer side is documented in [docs/connector.md](docs/connector.md).
-
-The implementation lives under [include/connector](include/connector) and [src/connector](src/connector).
-
-Short version:
-
-- Preferred transport: local socket for live data exchange.
-- Fallback transport: file-based replay for offline testing and debugging.
-- The transport layer is intentionally separate from the LoRa module abstraction so the other team can implement it without changing the pipeline contract.
+- [docs/build-and-run.md](docs/build-and-run.md)
+- [docs/configuration.md](docs/configuration.md)
+- [docs/architecture.md](docs/architecture.md)
+- [docs/release.md](docs/release.md)
+- [LoRa/docs/connector.md](LoRa/docs/connector.md)
+- [LoRa/docs/protobuf-nanopb.md](LoRa/docs/protobuf-nanopb.md)

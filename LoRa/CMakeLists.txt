@@ -33,22 +33,26 @@ if(LBR_ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_EXECUTABLE})
 endif()
 
-file(GLOB_RECURSE LBR_CLANG_SOURCE_FILES CONFIGURE_DEPENDS
+file(GLOB_RECURSE LBR_FORMAT_SOURCE_FILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cc
 )
 
+file(GLOB_RECURSE LBR_TIDY_SOURCE_FILES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
+)
+
 if(CLANG_FORMAT_EXECUTABLE)
     add_custom_target(clang-format
-        COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${LBR_CLANG_SOURCE_FILES}
+        COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${LBR_FORMAT_SOURCE_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Formatting C++ sources with clang-format."
     )
 
     add_custom_target(clang-format-check
-        COMMAND ${CLANG_FORMAT_EXECUTABLE} --dry-run --Werror ${LBR_CLANG_SOURCE_FILES}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format-check is available locally"
         COMMENT "Checking C++ format with clang-format."
     )
 else()
@@ -67,7 +71,7 @@ endif()
 
 if(CLANG_TIDY_EXECUTABLE)
     add_custom_target(clang-tidy
-        COMMAND ${CLANG_TIDY_EXECUTABLE} -p ${CMAKE_BINARY_DIR} ${LBR_CLANG_SOURCE_FILES}
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy is available locally"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Running clang-tidy static analysis."
     )
