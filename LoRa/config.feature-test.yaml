@@ -1,0 +1,19 @@
+sdr:
+  device: rtlsdr
+  sample_rate_hz: 2048000
+  center_freq_hz: 433920000
+  gain_db: 30
+
+pipeline:
+  verbose: true
+  output_path: "output/feature-test.bin"
+  interpret_telemetry: true
+  publish_decoded_zmq: false
+  # Optionally enable ZMQ publication (requires ZeroMQ library):
+  # publish_decoded_zmq: true
+  # decoded_zmq_endpoint: "tcp://127.0.0.1:5560"
+  # decoded_zmq_topic: "telemetry.decoded"
+
+lora:
+  module: sx1262
+  mode: virtual

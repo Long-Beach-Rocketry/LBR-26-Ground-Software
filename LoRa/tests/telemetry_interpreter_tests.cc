@@ -186,3 +186,69 @@ TEST(TelemetryInterpreterTests, SimulationMockPayloadIsDeterministic) {
     EXPECT_EQ(payload1[0], 0x08U);
     EXPECT_EQ(payload1[1], 0x02U);
 }
+
+// ============================================================================
+// STRUCTURED FIELD POPULATION TESTS
+// ============================================================================
+
+TEST(TelemetryInterpreterTests, FallbackDecodePopulatesStructuredFields) {
+    const std::uint8_t payload[] = {2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U};
+    const telemetry::DecodedTelemetry decoded =
+        telemetry::TelemetryInterpreter::fallback_decode(payload, sizeof(payload));
+
+    EXPECT_TRUE(decoded.decoded);
+    EXPECT_EQ(decoded.mode, 2U);
+    EXPECT_EQ(decoded.altitude_m, 16U);
+    EXPECT_EQ(decoded.velocity_cms, 500U);
+    EXPECT_EQ(decoded.battery_percent, 87U);
+    EXPECT_EQ(decoded.decode_source, "fallback_fdcan");
+}
+
+TEST(TelemetryInterpreterTests, FallbackDecodePopulatesMinimalFieldValues) {
+    const std::uint8_t payload[] = {0U, 0x00U, 0x00U, 0x00U, 0x00U, 0U};
+    const telemetry::DecodedTelemetry decoded =
+        telemetry::TelemetryInterpreter::fallback_decode(payload, sizeof(payload));
+
+    EXPECT_TRUE(decoded.decoded);
+    EXPECT_EQ(decoded.mode, 0U);
+    EXPECT_EQ(decoded.altitude_m, 0U);
+    EXPECT_EQ(decoded.velocity_cms, 0U);
+    EXPECT_EQ(decoded.battery_percent, 0U);
+}
+
+TEST(TelemetryInterpreterTests, FallbackDecodePopulatesMaximalFieldValues) {
+    const std::uint8_t payload[] = {0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU};
+    const telemetry::DecodedTelemetry decoded =
+        telemetry::TelemetryInterpreter::fallback_decode(payload, sizeof(payload));
+
+    EXPECT_TRUE(decoded.decoded);
+    EXPECT_EQ(decoded.mode, 255U);
+    EXPECT_EQ(decoded.altitude_m, 65535U);
+    EXPECT_EQ(decoded.velocity_cms, 65535U);
+    EXPECT_EQ(decoded.battery_percent, 255U);
+}
+
+TEST(TelemetryInterpreterTests, DecodePopulatesFieldsFromFallback) {
+    const std::uint8_t payload[] = {42U, 0x34U, 0x12U, 0x78U, 0x56U, 150U};
+    const telemetry::DecodedTelemetry decoded =
+        telemetry::TelemetryInterpreter::decode(payload, sizeof(payload));
+
+    EXPECT_TRUE(decoded.decoded);
+    EXPECT_EQ(decoded.mode, 42U);
+    EXPECT_EQ(decoded.altitude_m, 4660U);  // 0x1234 LE
+    EXPECT_EQ(decoded.velocity_cms, 22136U);  // 0x5678 LE
+    EXPECT_EQ(decoded.battery_percent, 150U);
+    EXPECT_EQ(decoded.decode_source, "fallback_fdcan");
+}
+
+TEST(TelemetryInterpreterTests, DecodeErrorReturnsZeroFields) {
+    const telemetry::DecodedTelemetry decoded =
+        telemetry::TelemetryInterpreter::decode(nullptr, 0);
+
+    EXPECT_FALSE(decoded.decoded);
+    EXPECT_EQ(decoded.mode, 0U);
+    EXPECT_EQ(decoded.altitude_m, 0U);
+    EXPECT_EQ(decoded.velocity_cms, 0U);
+    EXPECT_EQ(decoded.battery_percent, 0U);
+    EXPECT_EQ(decoded.decode_source, "error");
+}

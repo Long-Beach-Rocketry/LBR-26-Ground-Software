@@ -28,11 +28,11 @@ namespace {
 telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::decode(const uint8_t *payload,
                                                                     size_t payload_len) {
     if (payload == nullptr)
-        return {false, "missing payload buffer"};
+        return {false, "missing payload buffer", 0, 0, 0, 0, "error"};
     if (payload_len == 0)
-        return {false, "empty payload"};
+        return {false, "empty payload", 0, 0, 0, 0, "error"};
     if (payload_len > kMaxTelemetryPayloadBytes)
-        return {false, "payload too large"};
+        return {false, "payload too large", 0, 0, 0, 0, "error"};
 
 #if LBR_TELEMETRY_HAS_NANOPB
     TelemetryMessage message = TelemetryMessage_init_zero;
@@ -44,22 +44,23 @@ telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::decode(const uint8_
                 << " altitude_m=" << static_cast<unsigned int>(message.altitude_m)
                 << " velocity_cms=" << static_cast<unsigned int>(message.velocity_cms)
                 << " battery_percent=" << static_cast<int>(message.battery_percent);
-        return {true, summary.str()};
+        return {true, summary.str(), message.mode, message.altitude_m, 
+                message.velocity_cms, message.battery_percent, "pb_decode"};
     }
 #endif
 
     if (is_fdcan_legacy_payload(payload_len))
         return fallback_decode(payload, payload_len);
 
-    return {false, "nanopb decode failed and payload is not legacy fdcan"};
+    return {false, "nanopb decode failed and payload is not legacy fdcan", 0, 0, 0, 0, "error"};
 }
 
 telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::fallback_decode(const uint8_t *payload,
                                                                              size_t payload_len) {
     if (payload == nullptr)
-        return {false, "missing payload buffer"};
+        return {false, "missing payload buffer", 0, 0, 0, 0, "error"};
     if (!is_fdcan_legacy_payload(payload_len))
-        return {false, "payload is not legacy fdcan telemetry_v1"};
+        return {false, "payload is not legacy fdcan telemetry_v1", 0, 0, 0, 0, "error"};
 
     const uint8_t mode = payload[0];
     const uint16_t altitude_m =
@@ -76,7 +77,7 @@ telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::fallback_decode(con
             << " velocity_cms=" << velocity_cms
             << " battery_percent=" << static_cast<int>(battery_percent);
 
-    return {true, summary.str()};
+    return {true, summary.str(), mode, altitude_m, velocity_cms, battery_percent, "fallback_fdcan"};
 }
 
 bool telemetry::TelemetryInterpreter::nanopb_enabled() noexcept {

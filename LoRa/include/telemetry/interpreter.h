@@ -17,6 +17,11 @@ namespace telemetry {
     struct DecodedTelemetry {
         bool decoded = false;
         std::string summary;
+        std::uint32_t mode = 0;
+        std::uint32_t altitude_m = 0;
+        std::uint32_t velocity_cms = 0;
+        std::uint32_t battery_percent = 0;
+        std::string decode_source = "unknown";  // decode source (fallback_fdcan, pb_decode, error, etc.)
     };
 
     class TelemetryInterpreter {

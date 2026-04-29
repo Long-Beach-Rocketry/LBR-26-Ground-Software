@@ -11,6 +11,7 @@
 #include "connector/message.h"
 
 #include <chrono>
+#include <string>
 
 telemetry::DecodedTelemetryPublisher::DecodedTelemetryPublisher(std::string endpoint,
                                                                 std::string topic)
@@ -27,7 +28,19 @@ void telemetry::DecodedTelemetryPublisher::publish(const DecodedTelemetry &decod
             std::chrono::system_clock::now().time_since_epoch())
             .count();
     message.source = source;
-    message.payload.assign(decoded.summary.begin(), decoded.summary.end());
+    
+    // Build structured JSON payload
+    std::string payload_json = "{";
+    payload_json += "\"decoded\":" + std::string(decoded.decoded ? "true" : "false") + ",";
+    payload_json += "\"mode\":" + std::to_string(decoded.mode) + ",";
+    payload_json += "\"altitude_m\":" + std::to_string(decoded.altitude_m) + ",";
+    payload_json += "\"velocity_cms\":" + std::to_string(decoded.velocity_cms) + ",";
+    payload_json += "\"battery_percent\":" + std::to_string(decoded.battery_percent) + ",";
+    payload_json += "\"decode_source\":\"" + decoded.decode_source + "\",";
+    payload_json += "\"summary\":\"" + decoded.summary + "\"";
+    payload_json += "}";
+    
+    message.payload.assign(payload_json.begin(), payload_json.end());
     message.metadata["decoder"] = "TelemetryInterpreter";
 
     connector::LocalZmqTransport publisher(
