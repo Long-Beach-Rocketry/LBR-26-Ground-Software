@@ -7,6 +7,8 @@
 
 #include "sdr_pipeline.h"
 
+#include "connector/message.h"
+#include "telemetry/decoded_telemetry_publisher.h"
 #include "telemetry/interpreter.h"
 
 #include <array>
@@ -14,6 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string_view>
 
 namespace {
     const char *status_to_string(periph::LoRaStatusCode status) {
@@ -56,6 +59,13 @@ namespace {
         if (!out)
             throw std::runtime_error("Failed to write telemetry output file: " + output_path);
     }
+
+    connector::Source source_from_module_name(const std::string &module_name) {
+        if (module_name == "sx127")
+            return connector::Source::Sx127;
+
+        return connector::Source::Sx1262;
+    }
 }
 
 SDRPipeline::SDRPipeline(const cli::RuntimeSettings &settings, periph::ILoRaModule &lora_module)
@@ -96,9 +106,23 @@ void SDRPipeline::run() {
         return;
 
     const telemetry::DecodedTelemetry decoded =
-        telemetry::Interpreter::decode(telemetry_buffer.data(), receive_result.bytes_received);
+        telemetry::TelemetryInterpreter::decode(telemetry_buffer.data(), receive_result.bytes_received);
     if (decoded.decoded)
         std::cout << "  telemetry_decode: " << decoded.summary << '\n';
     else
         std::cout << "  telemetry_decode: unavailable (" << decoded.summary << ")\n";
+
+    if (!_settings.pipeline.publish_decoded_zmq || !decoded.decoded)
+        return;
+
+    try {
+        telemetry::DecodedTelemetryPublisher publisher(_settings.pipeline.decoded_zmq_endpoint,
+                                                       _settings.pipeline.decoded_zmq_topic);
+        publisher.publish(decoded,
+                          connector::source_to_string(source_from_module_name(_settings.lora.module)),
+                          _telemetry_sequence++);
+        std::cout << "  telemetry_zmq_publish: ok\n";
+    } catch (const std::exception &e) {
+        std::cout << "  telemetry_zmq_publish: unavailable (" << e.what() << ")\n";
+    }
 }

@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace telemetry {
     struct DecodedTelemetry {
@@ -18,7 +19,7 @@ namespace telemetry {
         std::string summary;
     };
 
-    class Interpreter {
+    class TelemetryInterpreter {
         public:
             /**
              * @brief Attempts to decode a telemetry payload into a human-readable summary.
@@ -27,7 +28,32 @@ namespace telemetry {
              * @return Decode status and summary text.
              */
             static DecodedTelemetry decode(const uint8_t *payload, size_t payload_len);
+
+            /**
+             * @brief Decodes legacy FDCAN telemetry payload format.
+             * @param payload Pointer to payload bytes.
+             * @param payload_len Number of payload bytes.
+             * @return Decode status and summary text.
+             */
+            static DecodedTelemetry fallback_decode(const uint8_t *payload, size_t payload_len);
+
+            /**
+             * @brief Returns a deterministic protobuf payload used by simulation tests.
+             * @return Encoded protobuf payload bytes.
+             */
+            static std::vector<std::uint8_t> simulation_mock_payload();
+
+            /**
+             * @brief Indicates whether nanopb telemetry decode support is compiled in.
+             * @return True when pb_decode based path is available.
+             */
+            static bool nanopb_enabled() noexcept;
+
+        private:
+            static bool is_fdcan_legacy_payload(size_t payload_len) noexcept;
     };
+
+    using Interpreter = TelemetryInterpreter;
 }
 
 #endif  // LORA_INCLUDE_TELEMETRY_INTERPRETER_H_

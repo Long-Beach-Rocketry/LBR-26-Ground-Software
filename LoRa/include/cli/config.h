@@ -25,6 +25,9 @@ namespace cli {
         bool verbose = false;
         std::string output_path = "output/frame.bin";
         bool interpret_telemetry = true;
+        bool publish_decoded_zmq = false;
+        std::string decoded_zmq_endpoint = "tcp://127.0.0.1:5560";
+        std::string decoded_zmq_topic = "telemetry.decoded";
     };
 
     struct LoRaSettings {

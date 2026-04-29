@@ -1,0 +1,2 @@
+# Intentionally empty for scalar-only telemetry message.
+# This file is kept for parity with connector-message.nanopb.options.

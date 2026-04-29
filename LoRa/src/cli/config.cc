@@ -187,6 +187,21 @@ bool cli::Config::parse_config_file(std::string &error_message) {
                                       _settings.pipeline.interpret_telemetry,
                                       error_message))
                 return false;
+            if (!parse_optional_value(pipeline_node,
+                                      "publish_decoded_zmq",
+                                      _settings.pipeline.publish_decoded_zmq,
+                                      error_message))
+                return false;
+            if (!parse_optional_value(pipeline_node,
+                                      "decoded_zmq_endpoint",
+                                      _settings.pipeline.decoded_zmq_endpoint,
+                                      error_message))
+                return false;
+            if (!parse_optional_value(pipeline_node,
+                                      "decoded_zmq_topic",
+                                      _settings.pipeline.decoded_zmq_topic,
+                                      error_message))
+                return false;
         }
 
         const YAML::Node lora_node = root["lora"];
@@ -215,6 +230,14 @@ bool cli::Config::parse_config_file(std::string &error_message) {
         }
         if (_settings.pipeline.output_path.empty()) {
             error_message = "pipeline.output_path must not be empty.";
+            return false;
+        }
+        if (_settings.pipeline.publish_decoded_zmq && _settings.pipeline.decoded_zmq_endpoint.empty()) {
+            error_message = "pipeline.decoded_zmq_endpoint must not be empty when publish_decoded_zmq=true.";
+            return false;
+        }
+        if (_settings.pipeline.publish_decoded_zmq && _settings.pipeline.decoded_zmq_topic.empty()) {
+            error_message = "pipeline.decoded_zmq_topic must not be empty when publish_decoded_zmq=true.";
             return false;
         }
         if (!is_supported_lora_module(_settings.lora.module)) {
