@@ -17,6 +17,41 @@
 #include <string>
 
 namespace {
+    class ConfigurableLoRaModule final : public periph::ILoRaModule {
+        public:
+            explicit ConfigurableLoRaModule(std::vector<uint8_t> payload)
+                : _payload(std::move(payload)) {}
+
+            periph::LoRaStatusCode init() override {
+                initialized = true;
+                return periph::LoRaStatusCode::Ok;
+            }
+
+            periph::LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override {
+                if (buf == nullptr && len > 0)
+                    return {periph::LoRaStatusCode::InvalidArgument, 0};
+
+                return {periph::LoRaStatusCode::Ok, len};
+            }
+
+            periph::LoRaReceiveResult receive(uint8_t *buf, size_t max_len,
+                                              uint32_t /*timeout_ms*/) override {
+                if (buf == nullptr)
+                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
+                if (max_len < _payload.size())
+                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
+                std::copy(_payload.begin(), _payload.end(), buf);
+                return {periph::LoRaStatusCode::Ok, _payload.size(), {true, -84, 7.5F}};
+            }
+
+            bool initialized = false;
+
+        private:
+            std::vector<uint8_t> _payload;
+    };
+
     class FakeLoRaModule final : public periph::ILoRaModule {
         public:
             periph::LoRaStatusCode init() override {
@@ -225,3 +260,134 @@ TEST(PipelineTests, InvalidOutputPathThrowsWhenPayloadMustBePersisted) {
     SDRPipeline pipeline(settings, module);
     EXPECT_THROW(static_cast<void>(pipeline.run()), std::runtime_error);
 }
+
+// ============================================================================
+// EXHAUSTIVE TELEMETRY PAYLOAD TESTS
+// ============================================================================
+
+TEST(PipelineTests, PipelineHandlesMinimalFdcanPayload) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/min-payload.bin";
+    settings.pipeline.interpret_telemetry = true;
+    settings.pipeline.publish_decoded_zmq = false;
+
+    std::vector<uint8_t> payload = {0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
+    EXPECT_NE(output.find("altitude_m=0"), std::string::npos);
+    EXPECT_NE(output.find("velocity_cms=0"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/min-payload.bin", ec);
+}
+
+TEST(PipelineTests, PipelineHandlesMaximalFdcanPayload) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/max-payload.bin";
+    settings.pipeline.interpret_telemetry = true;
+    settings.pipeline.publish_decoded_zmq = false;
+
+    std::vector<uint8_t> payload = {0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
+    EXPECT_NE(output.find("altitude_m=65535"), std::string::npos);
+    EXPECT_NE(output.find("velocity_cms=65535"), std::string::npos);
+    EXPECT_NE(output.find("battery_percent=255"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/max-payload.bin", ec);
+}
+
+TEST(PipelineTests, PipelineHandlesLittleEndianAltitudeVelocityInPayload) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/le-payload.bin";
+    settings.pipeline.interpret_telemetry = true;
+    settings.pipeline.publish_decoded_zmq = false;
+
+    // altitude_m should be 0x1234 (LE) = 4660, velocity_cms should be 0x5678 (LE) = 22136
+    std::vector<uint8_t> payload = {0x42U, 0x34U, 0x12U, 0x78U, 0x56U, 100U};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_NE(output.find("telemetry_v1"), std::string::npos);
+    EXPECT_NE(output.find("altitude_m=4660"), std::string::npos);
+    EXPECT_NE(output.find("velocity_cms=22136"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/le-payload.bin", ec);
+}
+
+TEST(PipelineTests, PipelineSkipsDecodingWhenInterpretTelemetryIsFalse) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/no-interpret.bin";
+    settings.pipeline.interpret_telemetry = false;
+    settings.pipeline.publish_decoded_zmq = false;
+
+    std::vector<uint8_t> payload = {2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_EQ(output.find("telemetry_decode"), std::string::npos);
+    EXPECT_NE(output.find("telemetry_bytes_received: 6"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/no-interpret.bin", ec);
+}
+
+TEST(PipelineTests, PipelineHandlesZmqPublicationConfiguration) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/zmq-config.bin";
+    settings.pipeline.interpret_telemetry = true;
+    settings.pipeline.publish_decoded_zmq = true;
+    settings.pipeline.decoded_zmq_endpoint = "tcp://127.0.0.1:5560";
+    settings.pipeline.decoded_zmq_topic = "telemetry.decoded";
+
+    std::vector<uint8_t> payload = {2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
+    EXPECT_NE(output.find("telemetry_zmq_publish"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/zmq-config.bin", ec);
+}
+
+TEST(PipelineTests, PipelineDoesNotPublishWhenPublishDecodedZmqIsFalse) {
+    cli::RuntimeSettings settings;
+    settings.pipeline.verbose = true;
+    settings.pipeline.output_path = "output/no-zmq.bin";
+    settings.pipeline.interpret_telemetry = true;
+    settings.pipeline.publish_decoded_zmq = false;
+
+    std::vector<uint8_t> payload = {2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U};
+    ConfigurableLoRaModule module(payload);
+
+    SDRPipeline pipeline(settings, module);
+    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
+
+    EXPECT_EQ(output.find("telemetry_zmq_publish"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove("output/no-zmq.bin", ec);
+}
+
