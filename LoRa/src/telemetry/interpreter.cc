@@ -1,16 +1,17 @@
 /**
- * @file interpreter.cc
- * @brief Lightweight telemetry payload interpreter
+ * @file LoRa/src/telemetry/interpreter.cc
+ * @brief Lightweight Telemetry payload interpreter
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
 
 #include "telemetry/interpreter.h"
+#include "telemetry/simulation_payloads.h"
 
 #include <sstream>
 
 #if defined(__has_include)
-    #if __has_include(<pb_decode.h>) && __has_include("telemetry-message.pb.h")
+    #if __has_include(<pb_decode.h>) && __has_include("Telemetry-message.pb.h")
         #include <pb_decode.h>
         #include "telemetry-message.pb.h"
         #define LBR_TELEMETRY_HAS_NANOPB 1
@@ -22,17 +23,20 @@
 #endif
 
 namespace {
+    /**
+     * @brief Maximum allowed telemetry payload size in bytes (256 bytes)
+     */
     constexpr std::size_t kMaxTelemetryPayloadBytes = 256U;
 }
 
-telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::decode(const uint8_t *payload,
+Telemetry::DecodedTelemetry Telemetry::TelemetryInterpreter::decode(const uint8_t *payload,
                                                                     size_t payload_len) {
     if (payload == nullptr)
-        return {false, "missing payload buffer", 0, 0, 0, 0, "error"};
+        return make_decoded_telemetry(false, "missing payload buffer", 0, 0, 0, 0, "error");
     if (payload_len == 0)
-        return {false, "empty payload", 0, 0, 0, 0, "error"};
+        return make_decoded_telemetry(false, "empty payload", 0, 0, 0, 0, "error");
     if (payload_len > kMaxTelemetryPayloadBytes)
-        return {false, "payload too large", 0, 0, 0, 0, "error"};
+        return make_decoded_telemetry(false, "payload too large", 0, 0, 0, 0, "error");
 
 #if LBR_TELEMETRY_HAS_NANOPB
     TelemetryMessage message = TelemetryMessage_init_zero;
@@ -44,23 +48,23 @@ telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::decode(const uint8_
                 << " altitude_m=" << static_cast<unsigned int>(message.altitude_m)
                 << " velocity_cms=" << static_cast<unsigned int>(message.velocity_cms)
                 << " battery_percent=" << static_cast<int>(message.battery_percent);
-        return {true, summary.str(), message.mode, message.altitude_m, 
-                message.velocity_cms, message.battery_percent, "pb_decode"};
+        return make_decoded_telemetry(true, summary.str(), message.mode, message.altitude_m,
+                                      message.velocity_cms, message.battery_percent, "pb_decode");
     }
 #endif
 
     if (is_fdcan_legacy_payload(payload_len))
         return fallback_decode(payload, payload_len);
 
-    return {false, "nanopb decode failed and payload is not legacy fdcan", 0, 0, 0, 0, "error"};
+    return make_decoded_telemetry(false, "nanopb decode failed and payload is not legacy fdcan", 0, 0, 0, 0, "error");
 }
 
-telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::fallback_decode(const uint8_t *payload,
+Telemetry::DecodedTelemetry Telemetry::TelemetryInterpreter::fallback_decode(const uint8_t *payload,
                                                                              size_t payload_len) {
     if (payload == nullptr)
-        return {false, "missing payload buffer", 0, 0, 0, 0, "error"};
+        return make_decoded_telemetry(false, "missing payload buffer", 0, 0, 0, 0, "error");
     if (!is_fdcan_legacy_payload(payload_len))
-        return {false, "payload is not legacy fdcan telemetry_v1", 0, 0, 0, 0, "error"};
+        return make_decoded_telemetry(false, "payload is not legacy fdcan telemetry_v1", 0, 0, 0, 0, "error");
 
     const uint8_t mode = payload[0];
     const uint16_t altitude_m =
@@ -77,27 +81,17 @@ telemetry::DecodedTelemetry telemetry::TelemetryInterpreter::fallback_decode(con
             << " velocity_cms=" << velocity_cms
             << " battery_percent=" << static_cast<int>(battery_percent);
 
-    return {true, summary.str(), mode, altitude_m, velocity_cms, battery_percent, "fallback_fdcan"};
+    return make_decoded_telemetry(true, summary.str(), mode, altitude_m, velocity_cms, battery_percent, "fallback_fdcan");
 }
 
-bool telemetry::TelemetryInterpreter::nanopb_enabled() noexcept {
+bool Telemetry::TelemetryInterpreter::nanopb_enabled() noexcept {
     return LBR_TELEMETRY_HAS_NANOPB != 0;
 }
 
-bool telemetry::TelemetryInterpreter::is_fdcan_legacy_payload(size_t payload_len) noexcept {
+bool Telemetry::TelemetryInterpreter::is_fdcan_legacy_payload(size_t payload_len) noexcept {
     return payload_len == 6U;
 }
 
-std::vector<std::uint8_t> telemetry::TelemetryInterpreter::simulation_mock_payload() {
-    return {
-        0x08U,
-        0x02U,
-        0x10U,
-        0x10U,
-        0x18U,
-        0xF4U,
-        0x03U,
-        0x20U,
-        0x57U,
-    };
+std::vector<std::uint8_t> Telemetry::TelemetryInterpreter::simulation_mock_payload() {
+    return simulation_mock_payload_bytes();
 }
