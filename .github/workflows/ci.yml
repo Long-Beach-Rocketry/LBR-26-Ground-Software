@@ -125,6 +125,41 @@ jobs:
           name: doxygen-html
           path: build-linux/docs/doxygen/html
 
+  gui:
+    name: GUI Tests and Package
+    runs-on: windows-latest
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install GUI Python deps
+        shell: powershell
+        run: python -m pip install -r gui/requirements-dev.txt
+
+      - name: Run GUI tests
+        shell: powershell
+        run: python -m pytest gui/tests
+
+      - name: Build GUI onefile binary
+        shell: powershell
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --name lbr-ground-gui `
+            --paths gui `
+            gui/main.py
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest

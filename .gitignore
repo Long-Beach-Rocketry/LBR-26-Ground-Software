@@ -14,3 +14,12 @@ compile_commands.json
 *.a
 *.lib
 *.dll
+
+# Python generated files
+__pycache__/
+*.pyc
+.DS_Store
+
+# PyInstaller outputs
+dist/
+*.spec

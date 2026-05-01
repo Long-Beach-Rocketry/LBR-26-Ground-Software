@@ -1,5 +1,48 @@
 # Build and Run
 
+## GUI Prerequisites
+
+- Python 3.12+
+- Dependencies from `gui/requirements.txt`
+
+Install the GUI dependencies from the repository root:
+
+```powershell
+python -m pip install -r gui/requirements.txt
+```
+
+For tests and local binary packaging:
+
+```powershell
+python -m pip install -r gui/requirements-dev.txt
+```
+
+## Run GUI
+
+```powershell
+python gui/main.py
+```
+
+On Linux, `gui/main.py` also has a shebang and executable bit:
+
+```bash
+./gui/main.py
+```
+
+## Test GUI
+
+```powershell
+python -m pytest gui/tests
+```
+
+## Package GUI Onefile Binary
+
+```powershell
+python -m PyInstaller --noconfirm --clean --onefile --name lbr-ground-gui --paths gui gui/main.py
+```
+
+The generated binary is written to `dist/`.
+
 ## Prerequisites
 
 - CMake

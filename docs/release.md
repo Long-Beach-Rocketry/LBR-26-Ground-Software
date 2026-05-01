@@ -45,10 +45,20 @@ Nightly release assets:
 
 - `lbr-nightly-linux-x64.tar.gz`
 - `lbr-nightly-windows-ucrt64-x64.zip`
+- `lbr-nightly-gui-linux-x64.tar.gz`
+- `lbr-nightly-gui-windows-x64.zip`
+- `lbr-nightly-windows-setup.exe`
+- `lbr-nightly-windows-setup.sha256`
 - `lbr-nightly-docs-html.tar.gz`
 
-The Linux and Windows binary archives include SHA-256 checksums. The GitHub Actions run
-also keeps the coverage report as a 14-day workflow artifact.
+The Linux, Windows, and GUI binary archives include SHA-256 checksums. The GitHub Actions
+run also keeps the coverage report as a 14-day workflow artifact.
+
+The Windows setup installer installs the GUI, command-line tools, and generated docs
+under the current user profile, creates Start Menu shortcuts, can optionally create a
+desktop shortcut, and can optionally add the CLI tools to the current user's `PATH`.
+Uninstall uses the standard Windows Apps uninstall entry and removes the `PATH` entry
+it created.
 
 ## Published Artifacts
 
