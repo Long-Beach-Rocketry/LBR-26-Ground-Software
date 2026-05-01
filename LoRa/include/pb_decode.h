@@ -5,4 +5,3 @@
 
 /* Decode functions provided in pb.h stub */
 
-#endif

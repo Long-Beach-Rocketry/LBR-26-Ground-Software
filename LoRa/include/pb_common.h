@@ -5,4 +5,3 @@
 
 /* Empty stub - definitions provided in pb.h */
 
-#endif
