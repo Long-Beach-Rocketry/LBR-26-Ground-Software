@@ -1,6 +1,6 @@
 /**
  * @file LoRa/src/telemetry/decoded_telemetry_serializer.cc
- * @brief Serializer implementation for DecodedTelemetry payloads
+ * @brief Serializer implementation for TelemetryMessage payloads
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
@@ -11,6 +11,9 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace {
     /**
@@ -109,63 +112,23 @@ namespace {
 }
 
 
-std::string Telemetry::DecodedTelemetrySerializer::to_json() const {
-    /**
-     * AUTOMATICALLY GENERATED FROM TELEMETRY_PROTO_FIELDS:
-     * This serialization dynamically pulls all proto fields from the central registry.
-     * When proto is extended, no changes needed here — just add entry to TELEMETRY_PROTO_FIELDS.
-     */
-    std::vector<std::string> proto_values;
-    proto_values.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size());
-
-    // Build field values from proto field registry
-    for (const auto &field_info : Telemetry::TELEMETRY_PROTO_FIELDS) {
-        proto_values.push_back(field_info.to_string_fn(data));
-    }
-
+std::string Telemetry::TelemetryMessageSerializer::to_json() const {
     std::vector<std::pair<std::string_view, std::string_view>> fields;
-    fields.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size() + 3);
+    fields.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size());
 
-    // Map proto field names to their computed values
-    for (std::size_t i = 0; i < Telemetry::TELEMETRY_PROTO_FIELDS.size(); ++i) {
-        fields.push_back({Telemetry::TELEMETRY_PROTO_FIELDS[i].name, proto_values[i]});
+    for (const auto &field_info : Telemetry::TELEMETRY_PROTO_FIELDS) {
+        fields.push_back({field_info.name, field_info.to_string_fn(data)});
     }
-
-    // Add extra non-proto metadata fields
-    const std::string decoded_str = data.decoded ? "true" : "false";
-    fields.push_back({"decoded", decoded_str});
-    fields.push_back({"decode_source", data.decode_source});
-    fields.push_back({"summary", data.summary});
 
     return serialize_to_json(fields);
 }
 
-std::string Telemetry::DecodedTelemetrySerializer::to_csv() const {
-    /**
-     * AUTOMATICALLY GENERATED FROM TELEMETRY_PROTO_FIELDS:
-     * This serialization dynamically pulls all proto fields from the central registry.
-     * When proto is extended, no changes needed here — just add entry to TELEMETRY_PROTO_FIELDS.
-     */
-    std::vector<std::string> values;
-    values.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size() + 3);
+std::string Telemetry::TelemetryMessageSerializer::to_csv() const {
+    std::vector<std::string> csv_values;
+    csv_values.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size());
 
-    // CSV starts with decoded flag
-    values.push_back(data.decoded ? "1" : "0");
-
-    // Add all proto field values in order
     for (const auto &field_info : Telemetry::TELEMETRY_PROTO_FIELDS) {
-        values.push_back(field_info.to_string_fn(data));
-    }
-
-    // Add extra metadata fields
-    values.push_back(data.decode_source);
-    values.push_back(data.summary);
-
-    // Convert to string_view vector for serializer
-    std::vector<std::string_view> csv_values;
-    csv_values.reserve(values.size());
-    for (const auto &v : values) {
-        csv_values.push_back(v);
+        csv_values.push_back(field_info.to_string_fn(data));
     }
 
     return serialize_to_csv(csv_values);

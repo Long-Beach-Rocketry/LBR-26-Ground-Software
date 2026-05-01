@@ -9,6 +9,7 @@
 
 #include <array>
 #include <algorithm>
+#include <span>
 
 namespace {
     constexpr std::array<std::uint8_t, 6> default_frame{{2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U}};
@@ -28,8 +29,22 @@ namespace {
         return {periph::LoRaStatusCode::Ok, frame.size(), signal};
     }
 
-    std::vector<std::uint8_t> default_frame_payload() {
-        return {default_frame.begin(), default_frame.end()};
+    periph::LoRaReceiveResult copy_frame(uint8_t *buf,
+                                         size_t max_len,
+                                         std::span<const std::uint8_t> frame,
+                                         const periph::LoRaSignalMetrics &signal) {
+        if (buf == nullptr && max_len > 0)
+            return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
+        if (max_len < frame.size())
+            return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
+
+        std::copy(frame.begin(), frame.end(), buf);
+        return {periph::LoRaStatusCode::Ok, frame.size(), signal};
+    }
+
+    std::span<const std::uint8_t> default_frame_payload() {
+        return default_frame;
     }
 }
 
@@ -57,7 +72,7 @@ periph::LoRaReceiveResult periph::SX127Module::receive(uint8_t *buf, size_t max_
         return {periph::LoRaStatusCode::NotInitialized, 0, {}};
 
     if (!_pending_frames.empty()) {
-        const std::vector<std::uint8_t> frame = _pending_frames.front();
+        std::vector<std::uint8_t> frame = std::move(_pending_frames.front());
         _pending_frames.pop_front();
         return copy_frame(buf, max_len, frame, default_signal);
     }
@@ -66,6 +81,6 @@ periph::LoRaReceiveResult periph::SX127Module::receive(uint8_t *buf, size_t max_
         return {periph::LoRaStatusCode::Timeout, 0, {}};
 
     _default_frame_emitted = true;
-    const std::vector<std::uint8_t> frame = default_frame_payload();
-    return copy_frame(buf, max_len, frame, default_signal);
+    const auto frame_span = default_frame_payload();
+    return copy_frame(buf, max_len, frame_span, default_signal);
 }

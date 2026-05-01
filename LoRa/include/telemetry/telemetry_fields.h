@@ -4,12 +4,11 @@
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  * 
- * This header centralizes the mapping between proto fields and C++ struct fields.
+ * This header centralizes the mapping between proto fields and field feed accessors.
  * When extending telemetry-message.proto with a new field:
  * 1. Add field to LoRa/docs/telemetry-message.proto
- * 2. Add field to Telemetry::DecodedTelemetry struct in LoRa/include/telemetry/interpreter.h
- * 3. Add ONE entry to TELEMETRY_PROTO_FIELDS below
- * 4. Serializers automatically include the new field (no manual changes needed)
+ * 2. Add ONE entry to TELEMETRY_PROTO_FIELDS below
+ * 3. Serializers and summaries automatically include the new field (no manual changes needed)
  */
 
 #pragma once
@@ -18,9 +17,7 @@
 
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <string>
-#include <string_view>
 
 namespace Telemetry {
 
@@ -28,15 +25,33 @@ namespace Telemetry {
  * @brief Metadata for a single telemetry proto field
  */
 struct FieldInfo {
-    /** @brief Proto field name (e.g., "altitude_m") */
+    /** @brief Proto field name (e.g., "field_2") */
     const char *name;
 
-    /** @brief Proto field number (e.g., 2 for altitude_m) */
+    /** @brief Proto field number (e.g., 2 for field_2) */
     std::uint32_t proto_field_number;
 
-    /** @brief Function to convert field value to string */
-    std::function<std::string(const DecodedTelemetry &)> to_string_fn;
+    /** @brief Function pointer to convert field value to string */
+    std::string (*to_string_fn)(const TelemetryMessage &);
 };
+
+namespace telemetry_field_converters {
+    inline std::string field_1_to_string(const TelemetryMessage &message) {
+        return std::to_string(message.field_1);
+    }
+
+    inline std::string field_2_to_string(const TelemetryMessage &message) {
+        return std::to_string(message.field_2);
+    }
+
+    inline std::string field_3_to_string(const TelemetryMessage &message) {
+        return std::to_string(message.field_3);
+    }
+
+    inline std::string field_4_to_string(const TelemetryMessage &message) {
+        return std::to_string(message.field_4);
+    }
+}
 
 /**
  * @brief THE SINGLE SOURCE OF TRUTH for proto field definitions.
@@ -48,10 +63,26 @@ struct FieldInfo {
  * Order matters: the first entry corresponds to proto field 1, second to field 2, etc.
  */
 inline const std::array<FieldInfo, 4> TELEMETRY_PROTO_FIELDS{{
-    {"mode", 1, [](const DecodedTelemetry &d) { return std::to_string(d.mode); }},
-    {"altitude_m", 2, [](const DecodedTelemetry &d) { return std::to_string(d.altitude_m); }},
-    {"velocity_cms", 3, [](const DecodedTelemetry &d) { return std::to_string(d.velocity_cms); }},
-    {"battery_percent", 4, [](const DecodedTelemetry &d) { return std::to_string(d.battery_percent); }},
+    {"field_1", 1, telemetry_field_converters::field_1_to_string},
+    {"field_2", 2, telemetry_field_converters::field_2_to_string},
+    {"field_3", 3, telemetry_field_converters::field_3_to_string},
+    {"field_4", 4, telemetry_field_converters::field_4_to_string},
 }};
+
+inline std::string summarize_telemetry_message(const TelemetryMessage &message,
+                                               const std::string &decode_source) {
+    std::string summary = "telemetry_proto";
+    if (!decode_source.empty())
+        summary += " decode_source=" + decode_source;
+
+    for (const auto &field_info : TELEMETRY_PROTO_FIELDS) {
+        summary += " ";
+        summary += field_info.name;
+        summary += "=";
+        summary += field_info.to_string_fn(message);
+    }
+
+    return summary;
+}
 
 }  // namespace Telemetry
