@@ -69,5 +69,3 @@ namespace {
         return (std::size_t)member - (std::size_t)p;
     }
 }
-
-#endif  // PB_H_STUB
