@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   nightly-linux:
-    name: Nightly Linux Regression
+    name: Nightly Linux Artifacts
     runs-on: ubuntu-latest
 
     steps:
@@ -42,8 +42,8 @@ jobs:
       - name: Configure with feature options
         run: cmake --preset linux-ninja-feature-options
 
-      - name: Build tests
-        run: cmake --build --preset linux-ninja-feature-options --target lbr_tests lbr_ground
+      - name: Build binaries and tests
+        run: cmake --build --preset linux-ninja-feature-options --target lbr_tests lbr_ground lbr_hil_runner
 
       - name: Run full tests
         run: ctest --preset linux-ninja-feature-options
@@ -56,6 +56,17 @@ jobs:
 
       - name: Build docs
         run: cmake --build --preset linux-ninja-feature-options --target docs
+
+      - name: Package Linux binaries
+        run: |
+          mkdir -p nightly/linux-x64/bin
+          cp build-linux-features/LoRa/lbr_ground nightly/linux-x64/bin/
+          cp build-linux-features/LoRa/lbr_hil_runner nightly/linux-x64/bin/
+          sha256sum nightly/linux-x64/bin/* > nightly/linux-x64/SHA256SUMS
+          tar -czf lbr-nightly-linux-x64.tar.gz -C nightly linux-x64
+
+      - name: Package docs
+        run: tar -czf lbr-nightly-docs-html.tar.gz -C build-linux-features/docs/doxygen html
 
       - name: Configure coverage build
         run: cmake --preset linux-ninja-coverage
@@ -74,17 +85,31 @@ jobs:
             --xml-pretty -o build-linux-coverage/coverage.xml \
             --html-details -o build-linux-coverage/coverage.html
 
-      - name: Upload nightly artifacts
+      - name: Upload Linux binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-linux-artifacts
+          name: lbr-nightly-linux-x64
+          path: lbr-nightly-linux-x64.tar.gz
+          retention-days: 14
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-docs-html
+          path: lbr-nightly-docs-html.tar.gz
+          retention-days: 14
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-coverage
           path: |
-            build-linux-features/docs/doxygen/html
             build-linux-coverage/coverage.xml
             build-linux-coverage/coverage.html
+          retention-days: 14
 
   nightly-windows:
-    name: Nightly Windows Smoke
+    name: Nightly Windows Artifacts
     runs-on: windows-latest
 
     steps:
@@ -105,10 +130,80 @@ jobs:
         shell: powershell
         run: cmake --fresh --preset windows-ucrt-ninja
 
-      - name: Build tests
+      - name: Build binaries and tests
         shell: powershell
-        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests lbr_ground
+        run: cmake --build --preset windows-ucrt-ninja --target lbr_tests lbr_ground lbr_hil_runner
 
       - name: Run tests
         shell: powershell
         run: ctest --preset windows-ucrt-ninja
+
+      - name: Package Windows binaries
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path nightly/windows-ucrt64-x64/bin | Out-Null
+          Copy-Item build/LoRa/lbr_ground.exe,build/LoRa/lbr_hil_runner.exe nightly/windows-ucrt64-x64/bin/
+          Get-ChildItem build/LoRa -Filter *.dll | Copy-Item -Destination nightly/windows-ucrt64-x64/bin/
+          Get-FileHash nightly/windows-ucrt64-x64/bin/* -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $($_.Path | Split-Path -Leaf)" } |
+            Set-Content nightly/windows-ucrt64-x64/SHA256SUMS
+          Compress-Archive -Path nightly/windows-ucrt64-x64 -DestinationPath lbr-nightly-windows-ucrt64-x64.zip -Force
+
+      - name: Upload Windows binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-windows-ucrt64-x64
+          path: lbr-nightly-windows-ucrt64-x64.zip
+          retention-days: 14
+
+  publish-nightly:
+    name: Publish Nightly Developer Release
+    runs-on: ubuntu-latest
+    needs:
+      - nightly-linux
+      - nightly-windows
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download nightly artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: nightly-artifacts
+
+      - name: Create release notes
+        run: |
+          short_sha="$(git rev-parse --short=12 HEAD)"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          {
+            echo "Automated developer nightly build."
+            echo
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Short SHA: ${short_sha}"
+            echo "- Run: ${run_url}"
+            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > nightly-release-notes.md
+
+      - name: Move nightly tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly "${GITHUB_SHA}"
+          git push --force origin refs/tags/nightly
+
+      - name: Publish nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Developer Build
+          body_path: nightly-release-notes.md
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+          files: |
+            nightly-artifacts/lbr-nightly-linux-x64/lbr-nightly-linux-x64.tar.gz
+            nightly-artifacts/lbr-nightly-windows-ucrt64-x64/lbr-nightly-windows-ucrt64-x64.zip
+            nightly-artifacts/lbr-nightly-docs-html/lbr-nightly-docs-html.tar.gz

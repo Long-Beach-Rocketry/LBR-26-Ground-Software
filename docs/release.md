@@ -35,6 +35,21 @@ You can run the `Release` workflow manually from GitHub Actions (`workflow_dispa
 
 - `tag`: release tag to publish (example `v1.2.3`)
 
+## Nightly Developer Release
+
+The `Nightly` workflow runs on the daily schedule and can also be started manually from
+GitHub Actions. It builds and uploads short-lived workflow artifacts, then updates the
+`nightly` prerelease for developer testing.
+
+Nightly release assets:
+
+- `lbr-nightly-linux-x64.tar.gz`
+- `lbr-nightly-windows-ucrt64-x64.zip`
+- `lbr-nightly-docs-html.tar.gz`
+
+The Linux and Windows binary archives include SHA-256 checksums. The GitHub Actions run
+also keeps the coverage report as a 14-day workflow artifact.
+
 ## Published Artifacts
 
 - `lbr-linux-x64.tar.gz`
@@ -46,4 +61,4 @@ You can run the `Release` workflow manually from GitHub Actions (`workflow_dispa
 - Use semantic tags (`vMAJOR.MINOR.PATCH`) for predictable automation.
 - Release binaries are built in `Release` mode.
 - Docs archive contains the generated Doxygen HTML tree.
-- Nightly runs are intended for broader regression coverage and early drift detection.
+- Nightly runs are intended for developer testing, broader regression coverage, and early drift detection.
