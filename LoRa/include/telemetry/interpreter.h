@@ -17,7 +17,7 @@
 // REQUIRED: telemetry-message.pb.h must be generated via nanopb compiler.
 // If this header is missing, the build MUST fail to prevent silent fallback behavior.
 // Re-generate via: nanopb_generator LoRa/docs/telemetry-message.proto -d LoRa/include/telemetry
-#include "telemetry-message.pb.h"
+#include "telemetry/telemetry-message.pb.h"
 
 namespace Telemetry {
     class TelemetryInterpreter {

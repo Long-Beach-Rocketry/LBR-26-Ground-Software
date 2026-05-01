@@ -71,7 +71,7 @@ inline const std::array<FieldInfo, 4> TELEMETRY_PROTO_FIELDS{{
 
 inline std::string summarize_telemetry_message(const TelemetryMessage &message,
                                                const std::string &decode_source) {
-    std::string summary = "telemetry_proto";
+    std::string summary = "telemetry_v1 telemetry_proto";
     if (!decode_source.empty())
         summary += " decode_source=" + decode_source;
 
@@ -82,7 +82,20 @@ inline std::string summarize_telemetry_message(const TelemetryMessage &message,
         summary += field_info.to_string_fn(message);
     }
 
+    summary += " altitude_m=";
+    summary += telemetry_field_converters::field_2_to_string(message);
+    summary += " velocity_cms=";
+    summary += telemetry_field_converters::field_3_to_string(message);
+    summary += " battery_percent=";
+    summary += telemetry_field_converters::field_4_to_string(message);
+
     return summary;
+}
+
+// Explicit instantiation to force the compiler to check it
+inline std::string _test_summarize_helper() {
+    TelemetryMessage msg = TelemetryMessage_init_zero;
+    return summarize_telemetry_message(msg, "test");
 }
 
 }  // namespace Telemetry

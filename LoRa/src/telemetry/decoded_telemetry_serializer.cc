@@ -11,7 +11,6 @@
 
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -74,7 +73,7 @@ namespace {
      * Takes a vector of (name, value) pairs and produces JSON output.
      * Values are automatically escaped for JSON safety.
      */
-    std::string serialize_to_json(const std::vector<std::pair<std::string_view, std::string_view>> &fields) {
+    std::string serialize_to_json(const std::vector<std::pair<std::string, std::string>> &fields) {
         std::ostringstream json;
         json << "{";
 
@@ -82,7 +81,7 @@ namespace {
         for (const auto &field : fields) {
             if (!first)
                 json << ",";
-            json << "\"" << field.first << "\":\"" << escape_json_string(std::string(field.second)) << "\"";
+            json << "\"" << field.first << "\":\"" << escape_json_string(field.second) << "\"";
             first = false;
         }
 
@@ -113,11 +112,11 @@ namespace {
 
 
 std::string Telemetry::TelemetryMessageSerializer::to_json() const {
-    std::vector<std::pair<std::string_view, std::string_view>> fields;
+    std::vector<std::pair<std::string, std::string>> fields;
     fields.reserve(Telemetry::TELEMETRY_PROTO_FIELDS.size());
 
     for (const auto &field_info : Telemetry::TELEMETRY_PROTO_FIELDS) {
-        fields.push_back({field_info.name, field_info.to_string_fn(data)});
+        fields.emplace_back(field_info.name, field_info.to_string_fn(data));
     }
 
     return serialize_to_json(fields);
