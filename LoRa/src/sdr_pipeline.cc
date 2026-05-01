@@ -127,10 +127,10 @@ void SDRPipeline::run() {
                                                        _settings.pipeline.decoded_zmq_topic);
         Telemetry::DecodedTelemetry decoded_struct;
         decoded_struct.decoded = decoded;
-        decoded_struct.mode = message.mode;
-        decoded_struct.altitude_m = message.altitude_m;
-        decoded_struct.velocity_cms = message.velocity_cms;
-        decoded_struct.battery_percent = message.battery_percent;
+        decoded_struct.mode = static_cast<int>(message.field_1);
+        decoded_struct.altitude_m = static_cast<int>(message.field_2);
+        decoded_struct.velocity_cms = static_cast<int>(message.field_3);
+        decoded_struct.battery_percent = static_cast<int>(message.field_4);
         decoded_struct.decode_source = decode_source;
         decoded_struct.summary = summary;
         
