@@ -27,7 +27,7 @@ from ui.widgets.status_bar import StatusBar
 from ui.widgets.telemetry_cards import TelemetryCardsPanel
 from ui.widgets.graphs_panel import GraphsPanel
 from ui.widgets.terminal_panel import TerminalPanel
-from ui.widgets.packet_viewer import PacketViewerPanel
+from ui.widgets.packet_panel import PacketPanel
 from ui.widgets.packet_panel_formatting import raw_value
 
 class MainWindow(QMainWindow):
@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         self._terminal = TerminalPanel()
         self._tabs.addTab(self._terminal, "💻  Terminal")
  
-        self._packet_viewer = PacketViewerPanel()
+        self._packet_viewer = PacketPanel()
         self._tabs.addTab(self._packet_viewer, "📦  Packets")
 
         splitter.addWidget(self._tabs)

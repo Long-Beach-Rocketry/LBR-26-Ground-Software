@@ -78,6 +78,52 @@ def format_packet_view(packet):
     return values
 
 
+def get_field_spec(field_key):
+    """Return the full spec tuple (name, aliases, pattern) for a named field.
+    
+    Used to extract unit and formatting info without duplicating specs.
+    Returns None if field_key is not found.
+    """
+    for fname, aliases, pattern in _DATA_FIELD_SPECS:
+        if fname == field_key:
+            return (fname, aliases, pattern)
+    return None
+
+
+def get_field_unit(field_key, fallback=None):
+    """Extract the unit string from the format pattern for a named field.
+    
+    Examples:
+        get_field_unit("altitude")  -> "m"
+        get_field_unit("velocity")  -> "m/s"
+        get_field_unit("temp")      -> "C"
+        get_field_unit("pkt_count") -> "-" (or custom fallback)
+    
+    Args:
+        field_key: Name of the field (e.g. "altitude", "velocity")
+        fallback: Optional unit string to use if no unit found in pattern.
+                 Defaults to "-" if not specified.
+    
+    Returns the unit string, fallback value, or "-" if nothing found.
+    """
+    spec = get_field_spec(field_key)
+    if not spec:
+        return fallback if fallback is not None else "-"
+    
+    _, _, pattern = spec
+    # Extract unit from pattern like "{:.2f} m" -> "m"
+    # Simple heuristic: look for non-format-string content after }
+    pattern_str = str(pattern)
+    parts = pattern_str.split("}")
+    if len(parts) > 1:
+        unit = parts[1].strip()
+        if unit:
+            return unit
+    
+    # No unit found in pattern, use fallback
+    return fallback if fallback is not None else "-"
+
+
 def raw_value(packet_or_frame, field_key):
     """Return the raw (unformatted) value for a named data field.
 

@@ -1,11 +1,11 @@
 """
-@File:   telemtry_cards.py
-@Brief:  a
+@File:   telemetry_cards.py
+@Brief:  Telemetry metric cards widget
 @Author: Mario Cruz
 @Orgin:  Long Beach Rocketry
 
 Description:
-    a
+    Metric-card UI panel that displays live telemetry values and alerts.
 """
 
 from PySide6.QtCore import Qt
@@ -20,7 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from models.models import TelemetryFrame
-from .packet_panel_formatting import raw_value
+from .packet_panel_formatting import raw_value, get_field_unit
+from .alert_rules import default_alert_rules
 
 class MetricCard(QFrame):
     def __init__(self, label, unit, parent = None):
@@ -115,9 +116,16 @@ class SectionHeader(QLabel):
         )
     
 class TelemetryCardsPanel(QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, alert_rules = None):
         super().__init__(parent)
+        self._alert_rules = alert_rules or default_alert_rules()
         self._build_ui()
+
+    def _is_alert(self, metric_key, value):
+        rule = self._alert_rules.get(metric_key)
+        if rule is None:
+            return False
+        return rule.is_alert(value)
     
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -129,9 +137,9 @@ class TelemetryCardsPanel(QWidget):
         flight_grid = QGridLayout()
         flight_grid.setSpacing(10)
 
-        self._alt = MetricCard("Altitude", "m")
-        self._vel = MetricCard("Velocity", "m/s")
-        self._accel = MetricCard("Acceleration", "m/s")
+        self._alt = MetricCard("Altitude", get_field_unit("altitude"))
+        self._vel = MetricCard("Velocity", get_field_unit("velocity"))
+        self._accel = MetricCard("Acceleration", get_field_unit("accel"))
 
         flight_grid.addWidget(self._alt, 0, 0)
         flight_grid.addWidget(self._vel, 0, 1)
@@ -143,9 +151,9 @@ class TelemetryCardsPanel(QWidget):
         sys_grid = QGridLayout()
         sys_grid.setSpacing(10)
 
-        self._temp = MetricCard("Temperature", "C")
-        self._battery = MetricCard("Battery", "V")
-        self._pressure = MetricCard("Pressure", "Pa")
+        self._temp = MetricCard("Temperature", get_field_unit("temp"))
+        self._battery = MetricCard("Battery", get_field_unit("battery"))
+        self._pressure = MetricCard("Pressure", get_field_unit("pressure"))
 
         sys_grid.addWidget(self._temp, 0, 0)
         sys_grid.addWidget(self._battery, 0, 1)
@@ -157,8 +165,8 @@ class TelemetryCardsPanel(QWidget):
         rf_grid = QGridLayout()
         rf_grid.setSpacing(10)
 
-        self._rssi = MetricCard("RSSI", "dBm")
-        self._pkt_cnt = MetricCard("Packets", "rx")
+        self._rssi = MetricCard("RSSI", get_field_unit("signal"))
+        self._pkt_cnt = MetricCard("Packets", get_field_unit("pkt_count", "count"))
 
         rf_grid.addWidget(self._rssi, 0, 0)
         rf_grid.addWidget(self._pkt_cnt, 0, 1)
@@ -184,15 +192,15 @@ class TelemetryCardsPanel(QWidget):
         self._accel.set_value(accel, 2)
 
         self._temp.set_value(temp, 1)
-        self._temp.set_alert((temp is not None) and (temp > 80))
+        self._temp.set_alert(self._is_alert("temp", temp))
 
         self._battery.set_value(battery, 2)
-        self._battery.set_alert((battery is not None) and (battery < 5.0))
+        self._battery.set_alert(self._is_alert("battery", battery))
 
         self._pressure.set_value(pressure, 0)
-        self._pressure.set_alert((pressure is not None) and (pressure < 50000))
+        self._pressure.set_alert(self._is_alert("pressure", pressure))
 
         self._rssi.set_value(signal, 1)
-        self._rssi.set_alert((signal is not None) and (signal < -90))
+        self._rssi.set_alert(self._is_alert("signal", signal))
 
         self._pkt_cnt.set_value(float(pkt_cnt) if pkt_cnt is not None else None, 0)

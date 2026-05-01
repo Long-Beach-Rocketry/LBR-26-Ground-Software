@@ -10,19 +10,37 @@ Description:
 """
 
 
+import argparse
 import sys
 from PySide6.QtWidgets import QApplication
-from data.mockdata import MockDataSource
+from data.factory import create_datasource
 from ui.main_window import MainWindow
 
 
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Ground Station GUI")
+    parser.add_argument(
+        "--source",
+        default="mock",
+        choices=["mock"],
+        help="Data source backend to use",
+    )
+    parser.add_argument(
+        "--interval-ms",
+        type=int,
+        default=1000,
+        help="Update interval in milliseconds for mock source",
+    )
+    return parser.parse_args(argv)
+
+
 def main():
+    args = _parse_args()
+
     app = QApplication(sys.argv)
     app.setApplicationName("Ground Station GUI")
 
-    # MockDataSource will send telementry data every 1 second
-    # TODO: Change MockData with real data source in future
-    source = MockDataSource(interval_ms = 1000)
+    source = create_datasource(mode=args.source, interval_ms=args.interval_ms)
 
     window = MainWindow(datasource = source)
     window.show()

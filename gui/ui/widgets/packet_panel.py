@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 from .packet_panel_formatting import format_packet_view
 
 
-class PacketViewerPanel(QWidget):
+class PacketPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
