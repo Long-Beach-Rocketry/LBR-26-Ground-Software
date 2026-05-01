@@ -149,6 +149,7 @@ lbr_enable_coverage(lora_periph)
 
 add_library(connector
     src/connector/message.cc
+    src/connector/checksum.cc
     src/connector/ndjson_file.cc
     src/connector/local_tcp_transport.cc
     src/connector/local_udp_transport.cc
@@ -180,6 +181,7 @@ lbr_enable_coverage(connector)
 add_library(telemetry
     src/telemetry/interpreter.cc
     src/telemetry/decoded_telemetry_publisher.cc
+    src/telemetry/telemetry-message.pb.cc
 )
 target_include_directories(telemetry PUBLIC include)
 target_link_libraries(telemetry PUBLIC connector)
