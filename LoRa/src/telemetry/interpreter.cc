@@ -10,7 +10,7 @@
 #include "telemetry/telemetry_fields.h"
 
 #include <pb_decode.h>
-#include "telemetry-message.pb.h"
+#include "telemetry/telemetry-message.pb.h"
 
 #include <sstream>
 
