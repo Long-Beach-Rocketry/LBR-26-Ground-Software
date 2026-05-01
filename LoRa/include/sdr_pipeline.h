@@ -11,8 +11,6 @@
 #include "cli/config.h"
 #include "periph/i_lora_module.h"
 
-#include <cstdint>
-
 class SDRPipeline {
     public:
         /**
@@ -30,7 +28,6 @@ class SDRPipeline {
     private:
         cli::RuntimeSettings _settings;
         periph::ILoRaModule &_lora_module;
-        std::uint64_t _telemetry_sequence = 0;
 };
 
     #endif  // LORA_INCLUDE_SDR_PIPELINE_H_

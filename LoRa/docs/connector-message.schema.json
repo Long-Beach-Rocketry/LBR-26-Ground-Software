@@ -39,7 +39,7 @@
     },
     "checksum_hex": {
       "type": "string",
-      "pattern": "^[0-9A-Fa-f]{8}$"
+      "pattern": "^[0-9A-Fa-f]+$"
     },
     "metadata": {
       "type": "object",

@@ -9,7 +9,6 @@
 #define LORA_INCLUDE_CONNECTOR_LOCAL_ZMQ_TRANSPORT_H_
 
 #include <cstdint>
-#include <memory>
 #include <string>
 
 namespace connector {
@@ -78,7 +77,7 @@ namespace connector {
             bool _is_open = false;
 
             struct Impl;
-            std::unique_ptr<Impl> _impl;
+            Impl *_impl = nullptr;
     };
 }
 

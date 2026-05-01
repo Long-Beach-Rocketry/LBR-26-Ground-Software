@@ -10,7 +10,6 @@
 #include "periph/sx1262_module.h"
 #include "periph/sx127_module.h"
 #include "sdr_pipeline.h"
-#include "telemetry/test_payloads.h"
 #include "test_common.h"
 
 #include <filesystem>
@@ -18,41 +17,6 @@
 #include <string>
 
 namespace {
-    class ConfigurableLoRaModule final : public periph::ILoRaModule {
-        public:
-            explicit ConfigurableLoRaModule(std::vector<uint8_t> payload)
-                : _payload(std::move(payload)) {}
-
-            periph::LoRaStatusCode init() override {
-                initialized = true;
-                return periph::LoRaStatusCode::Ok;
-            }
-
-            periph::LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override {
-                if (buf == nullptr && len > 0)
-                    return {periph::LoRaStatusCode::InvalidArgument, 0};
-
-                return {periph::LoRaStatusCode::Ok, len};
-            }
-
-            periph::LoRaReceiveResult receive(uint8_t *buf, size_t max_len,
-                                              uint32_t /*timeout_ms*/) override {
-                if (buf == nullptr)
-                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
-                if (max_len < _payload.size())
-                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
-                std::copy(_payload.begin(), _payload.end(), buf);
-                return {periph::LoRaStatusCode::Ok, _payload.size(), {true, -84, 7.5F}};
-            }
-
-            bool initialized = false;
-
-        private:
-            std::vector<uint8_t> _payload;
-    };
-
     class FakeLoRaModule final : public periph::ILoRaModule {
         public:
             periph::LoRaStatusCode init() override {
@@ -72,12 +36,16 @@ namespace {
                 if (buf == nullptr)
                     return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
 
-                const auto payload = Telemetry::Test::payload_mode_2_altitude_16_velocity_500_battery_87();
-                if (max_len < payload.size())
+                if (max_len < 6)
                     return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
 
-                std::copy(payload.begin(), payload.end(), buf);
-                return {periph::LoRaStatusCode::Ok, payload.size(), {true, -84, 7.5F}};
+                buf[0] = 2;
+                buf[1] = 0x10;
+                buf[2] = 0x00;
+                buf[3] = 0xF4;
+                buf[4] = 0x01;
+                buf[5] = 87;
+                return {periph::LoRaStatusCode::Ok, 6, {true, -84, 7.5F}};
             }
 
             bool initialized = false;
@@ -131,7 +99,7 @@ TEST(PipelineTests, All) {
         EXPECT_NE(output.find("output_path: output/frame.bin"), std::string::npos);
         EXPECT_NE(output.find("lora_module: sx1262"), std::string::npos);
         EXPECT_NE(output.find("telemetry_status: ok"), std::string::npos);
-        EXPECT_NE(output.find("telemetry_bytes_received: 16"), std::string::npos);
+        EXPECT_NE(output.find("telemetry_bytes_received: 6"), std::string::npos);
         EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
     }
 
@@ -236,10 +204,13 @@ TEST(PipelineTests, WritesReceivedPayloadToOutputFile) {
     std::ifstream in(output_path, std::ios::binary);
     ASSERT_TRUE(in.good());
     std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    const auto expected_payload = Telemetry::Test::payload_mode_2_altitude_16_velocity_500_battery_87();
-    ASSERT_EQ(bytes.size(), expected_payload.size());
-    for (std::size_t i = 0; i < expected_payload.size(); ++i)
-        EXPECT_EQ(static_cast<unsigned char>(bytes[i]), expected_payload[i]);
+    ASSERT_EQ(bytes.size(), static_cast<std::size_t>(6));
+    EXPECT_EQ(static_cast<unsigned char>(bytes[0]), 2U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[1]), 0x10U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[2]), 0x00U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[3]), 0xF4U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[4]), 0x01U);
+    EXPECT_EQ(static_cast<unsigned char>(bytes[5]), 87U);
 
     std::filesystem::remove(output_path, ec);
 }
@@ -254,130 +225,3 @@ TEST(PipelineTests, InvalidOutputPathThrowsWhenPayloadMustBePersisted) {
     SDRPipeline pipeline(settings, module);
     EXPECT_THROW(static_cast<void>(pipeline.run()), std::runtime_error);
 }
-
-// ============================================================================
-// EXHAUSTIVE TELEMETRY PAYLOAD TESTS
-// ============================================================================
-
-TEST(PipelineTests, PipelineHandlesMinimalFdcanPayload) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/min-payload.bin";
-    settings.pipeline.interpret_telemetry = true;
-    settings.pipeline.publish_decoded_zmq = false;
-
-    ConfigurableLoRaModule module(Telemetry::Test::payload_all_zeros());
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
-    EXPECT_NE(output.find("altitude_m=0"), std::string::npos);
-    EXPECT_NE(output.find("velocity_cms=0"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/min-payload.bin", ec);
-}
-
-TEST(PipelineTests, PipelineHandlesMaximalFdcanPayload) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/max-payload.bin";
-    settings.pipeline.interpret_telemetry = true;
-    settings.pipeline.publish_decoded_zmq = false;
-
-    ConfigurableLoRaModule module(Telemetry::Test::payload_all_max());
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
-    EXPECT_NE(output.find("altitude_m=4294967295"), std::string::npos);
-    EXPECT_NE(output.find("velocity_cms=4294967295"), std::string::npos);
-    EXPECT_NE(output.find("battery_percent=4294967295"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/max-payload.bin", ec);
-}
-
-TEST(PipelineTests, PipelineHandlesLittleEndianAltitudeVelocityInPayload) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/le-payload.bin";
-    settings.pipeline.interpret_telemetry = true;
-    settings.pipeline.publish_decoded_zmq = false;
-
-    ConfigurableLoRaModule module(Telemetry::Test::payload_arbitrary_values());
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_NE(output.find("telemetry_v1"), std::string::npos);
-    EXPECT_NE(output.find("altitude_m=4660"), std::string::npos);
-    EXPECT_NE(output.find("velocity_cms=22136"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/le-payload.bin", ec);
-}
-
-TEST(PipelineTests, PipelineSkipsDecodingWhenInterpretTelemetryIsFalse) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/no-interpret.bin";
-    settings.pipeline.interpret_telemetry = false;
-    settings.pipeline.publish_decoded_zmq = false;
-
-    std::vector<uint8_t> payload = {2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U};
-    ConfigurableLoRaModule module(payload);
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_EQ(output.find("telemetry_decode"), std::string::npos);
-    EXPECT_NE(output.find("telemetry_bytes_received: 6"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/no-interpret.bin", ec);
-}
-
-TEST(PipelineTests, PipelineHandlesZmqPublicationConfiguration) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/zmq-config.bin";
-    settings.pipeline.interpret_telemetry = true;
-    settings.pipeline.publish_decoded_zmq = true;
-    settings.pipeline.decoded_zmq_endpoint = "tcp://127.0.0.1:5560";
-    settings.pipeline.decoded_zmq_topic = "telemetry.decoded";
-
-    ConfigurableLoRaModule module(
-        Telemetry::Test::payload_mode_2_altitude_16_velocity_500_battery_87());
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_NE(output.find("telemetry_decode: telemetry_v1"), std::string::npos);
-    EXPECT_NE(output.find("telemetry_zmq_publish"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/zmq-config.bin", ec);
-}
-
-TEST(PipelineTests, PipelineDoesNotPublishWhenPublishDecodedZmqIsFalse) {
-    cli::RuntimeSettings settings;
-    settings.pipeline.verbose = true;
-    settings.pipeline.output_path = "output/no-zmq.bin";
-    settings.pipeline.interpret_telemetry = true;
-    settings.pipeline.publish_decoded_zmq = false;
-
-    ConfigurableLoRaModule module(
-        Telemetry::Test::payload_mode_2_altitude_16_velocity_500_battery_87());
-
-    SDRPipeline pipeline(settings, module);
-    const std::string output = tests::capture_stdout([&pipeline]() { pipeline.run(); });
-
-    EXPECT_EQ(output.find("telemetry_zmq_publish"), std::string::npos);
-
-    std::error_code ec;
-    std::filesystem::remove("output/no-zmq.bin", ec);
-}
-

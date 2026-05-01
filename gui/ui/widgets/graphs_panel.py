@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
     QWidget)
 
 from models.models import TelemetryFrame
-from .packet_panel_formatting import raw_value
 
 
 graph_limit = 60
@@ -295,15 +294,10 @@ class GraphsPanel(QWidget):
             y_axis.setRange(y_min_tracker[0] - margin, y_max_tracker[0] + margin)
 
     def update_frame(self, frame: TelemetryFrame):
-        alt = raw_value(frame, "altitude")
-        vel = raw_value(frame, "velocity")
-        accel = raw_value(frame, "accel")
-        rssi = raw_value(frame, "signal")
-
-        self._alt_data.append(alt if alt is not None else 0.0)
-        self._vel_data.append(vel if vel is not None else 0.0)
-        self._accel_data.append(accel if accel is not None else 0.0)
-        self._rssi_data.append(rssi if rssi is not None else 0.0)
+        self._alt_data.append(frame.altitude)
+        self._vel_data.append(frame.velocity)
+        self._accel_data.append(frame.acceleration)
+        self._rssi_data.append(frame.signal)
 
         self._update_series(self._alt_series, self._alt_yaxis, self._alt_data, self._alt_ymin, self._alt_ymax)
         self._update_series(self._vel_series, self._vel_yaxis, self._vel_data, self._vel_ymin, self._vel_ymax)

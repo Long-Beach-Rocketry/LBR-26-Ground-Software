@@ -29,7 +29,7 @@ namespace {
     }
 
     std::vector<std::uint8_t> default_frame_payload() {
-        return std::vector<std::uint8_t>(default_frame.begin(), default_frame.end());
+        return {default_frame.begin(), default_frame.end()};
     }
 }
 
@@ -57,7 +57,7 @@ periph::LoRaReceiveResult periph::SX1262Module::receive(uint8_t *buf, size_t max
         return {periph::LoRaStatusCode::NotInitialized, 0, {}};
 
     if (!_pending_frames.empty()) {
-        std::vector<std::uint8_t> frame = std::move(_pending_frames.front());
+        const std::vector<std::uint8_t> frame = _pending_frames.front();
         _pending_frames.pop_front();
         return copy_frame(buf, max_len, frame, default_signal);
     }
@@ -66,6 +66,6 @@ periph::LoRaReceiveResult periph::SX1262Module::receive(uint8_t *buf, size_t max
         return {periph::LoRaStatusCode::Timeout, 0, {}};
 
     _default_frame_emitted = true;
-    const auto frame_span = default_frame_payload();
-    return copy_frame(buf, max_len, frame_span, default_signal);
+    const std::vector<std::uint8_t> frame = default_frame_payload();
+    return copy_frame(buf, max_len, frame, default_signal);
 }

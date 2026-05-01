@@ -29,11 +29,12 @@ connector::LocalZmqTransport::LocalZmqTransport(LocalZmqMode mode,
     : _mode(mode),
       _endpoint(std::move(endpoint)),
       _topic(std::move(topic)),
-      _impl(std::make_unique<Impl>()) {}
+      _impl(new Impl()) {}
 
 connector::LocalZmqTransport::~LocalZmqTransport() {
     close();
-    // unique_ptr automatically deallocates
+    delete _impl;
+    _impl = nullptr;
 }
 
 void connector::LocalZmqTransport::open() {

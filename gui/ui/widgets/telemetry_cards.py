@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
 )
 
 from models.models import TelemetryFrame
-from .packet_panel_formatting import raw_value
 
 class MetricCard(QFrame):
     def __init__(self, label, unit, parent = None):
@@ -56,14 +55,7 @@ class MetricCard(QFrame):
         self._apply_normal_style()
 
     def set_value(self, value, decimals = 1):
-        if value is None:
-            self._value.setText("-")
-            return
-
-        try:
-            self._value.setText(f"{value:.{decimals}f}")
-        except (TypeError, ValueError):
-            self._value.setText(str(value))
+        self._value.setText(f"{value:.{decimals}f}")
 
     def set_alert(self, is_alert):
         if is_alert:
@@ -168,31 +160,20 @@ class TelemetryCardsPanel(QWidget):
         root.addStretch()
 
     def update_frame(self, frame: TelemetryFrame):
-        alt = raw_value(frame, "altitude")
-        vel = raw_value(frame, "velocity")
-        accel = raw_value(frame, "accel")
+        self._alt.set_value(frame.altitude, 1)
+        self._vel.set_value(frame.velocity, 1)
+        self._accel.set_value(frame.acceleration, 2)
 
-        temp = raw_value(frame, "temp")
-        battery = raw_value(frame, "battery")
-        pressure = raw_value(frame, "pressure")
+        self._temp.set_value(frame.temperature, 1)
+        self._temp.set_alert(frame.temperature > 80)
 
-        signal = raw_value(frame, "signal")
-        pkt_cnt = raw_value(frame, "pkt_count")
+        self._battery.set_value(frame.battery, 2)
+        self._battery.set_alert(frame.battery < 5.0)
 
-        self._alt.set_value(alt, 1)
-        self._vel.set_value(vel, 1)
-        self._accel.set_value(accel, 2)
+        self._pressure.set_value(frame.pressure_pa, 0)
+        self._pressure.set_alert(frame.pressure_pa < 50000)
 
-        self._temp.set_value(temp, 1)
-        self._temp.set_alert((temp is not None) and (temp > 80))
+        self._rssi.set_value(frame.signal, 1)
+        self._rssi.set_alert(frame.signal < -90)
 
-        self._battery.set_value(battery, 2)
-        self._battery.set_alert((battery is not None) and (battery < 5.0))
-
-        self._pressure.set_value(pressure, 0)
-        self._pressure.set_alert((pressure is not None) and (pressure < 50000))
-
-        self._rssi.set_value(signal, 1)
-        self._rssi.set_alert((signal is not None) and (signal < -90))
-
-        self._pkt_cnt.set_value(float(pkt_cnt) if pkt_cnt is not None else None, 0)
+        self._pkt_cnt.set_value(float(frame.packet_count), 0)
