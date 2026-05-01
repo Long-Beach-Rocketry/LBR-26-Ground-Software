@@ -9,7 +9,6 @@
 
 #include <array>
 #include <algorithm>
-#include <span>
 
 namespace {
     constexpr std::array<std::uint8_t, 6> default_frame{{2U, 0x10U, 0x00U, 0xF4U, 0x01U, 87U}};
@@ -29,22 +28,8 @@ namespace {
         return {periph::LoRaStatusCode::Ok, frame.size(), signal};
     }
 
-    periph::LoRaReceiveResult copy_frame(uint8_t *buf,
-                                         size_t max_len,
-                                         std::span<const std::uint8_t> frame,
-                                         const periph::LoRaSignalMetrics &signal) {
-        if (buf == nullptr && max_len > 0)
-            return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
-        if (max_len < frame.size())
-            return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
-        std::copy(frame.begin(), frame.end(), buf);
-        return {periph::LoRaStatusCode::Ok, frame.size(), signal};
-    }
-
-    std::span<const std::uint8_t> default_frame_payload() {
-        return default_frame;
+    std::vector<std::uint8_t> default_frame_payload() {
+        return std::vector<std::uint8_t>(default_frame.begin(), default_frame.end());
     }
 }
 
