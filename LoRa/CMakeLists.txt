@@ -181,7 +181,6 @@ lbr_enable_coverage(connector)
 add_library(telemetry
     src/telemetry/interpreter.cc
     src/telemetry/decoded_telemetry_publisher.cc
-    src/telemetry/telemetry-message.pb.cc
 )
 target_include_directories(telemetry PUBLIC include)
 target_link_libraries(telemetry PUBLIC connector)
@@ -218,6 +217,7 @@ if(BUILD_TESTING)
         tests/connector_tests.cc
         tests/pipeline_tests.cc
         tests/telemetry_interpreter_tests.cc
+        tests/telemetry_serializer_tests.cc
     )
     target_include_directories(lbr_tests PRIVATE include tests)
     target_link_libraries(lbr_tests PRIVATE cli connector lora_periph sdr_pipeline GTest::gtest)
