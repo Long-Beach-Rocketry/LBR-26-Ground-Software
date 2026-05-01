@@ -9,6 +9,7 @@
 
 #include "connector/message.h"
 #include "telemetry/decoded_telemetry_publisher.h"
+#include "telemetry/decoded_telemetry_serializer.h"
 #include "telemetry/interpreter.h"
 
 #include <array>
@@ -105,20 +106,35 @@ void SDRPipeline::run() {
     if (!_settings.pipeline.interpret_telemetry)
         return;
 
-    const telemetry::DecodedTelemetry decoded =
-        telemetry::TelemetryInterpreter::decode(telemetry_buffer.data(), receive_result.bytes_received);
-    if (decoded.decoded)
-        std::cout << "  telemetry_decode: " << decoded.summary << '\n';
+    TelemetryMessage message = TelemetryMessage_init_zero;
+    std::string summary;
+    std::string decode_source;
+    const bool decoded = Telemetry::TelemetryInterpreter::decode(telemetry_buffer.data(),
+                                                                 receive_result.bytes_received,
+                                                                 message,
+                                                                 summary,
+                                                                 decode_source);
+    if (decoded)
+        std::cout << "  telemetry_decode: " << summary << '\n';
     else
-        std::cout << "  telemetry_decode: unavailable (" << decoded.summary << ")\n";
+        std::cout << "  telemetry_decode: unavailable (" << summary << ")\n";
 
-    if (!_settings.pipeline.publish_decoded_zmq || !decoded.decoded)
+    if (!_settings.pipeline.publish_decoded_zmq || !decoded)
         return;
 
     try {
         telemetry::DecodedTelemetryPublisher publisher(_settings.pipeline.decoded_zmq_endpoint,
                                                        _settings.pipeline.decoded_zmq_topic);
-        publisher.publish(decoded,
+        Telemetry::DecodedTelemetry decoded_struct;
+        decoded_struct.decoded = decoded;
+        decoded_struct.mode = message.mode;
+        decoded_struct.altitude_m = message.altitude_m;
+        decoded_struct.velocity_cms = message.velocity_cms;
+        decoded_struct.battery_percent = message.battery_percent;
+        decoded_struct.decode_source = decode_source;
+        decoded_struct.summary = summary;
+        
+        publisher.publish(decoded_struct,
                           connector::source_to_string(source_from_module_name(_settings.lora.module)),
                           _telemetry_sequence++);
         std::cout << "  telemetry_zmq_publish: ok\n";
