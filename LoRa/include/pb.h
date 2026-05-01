@@ -10,18 +10,18 @@
 /* Minimal pb_field_t and related types */
 typedef std::uint8_t pb_type_t;
 typedef std::size_t pb_size_t;
+typedef std::int64_t pb_field_long_t;
 
 #define PB_LTYPE_FIXED32  0x04
 #define PB_LTYPE_NONE     0x00
 
 typedef struct {
     std::uint32_t first;
-    std::uint32_t tag;
     pb_type_t type;
-    std::uint16_t offset;
+    std::size_t offset;
     void *pData;
     void *pSize;
-    int64_t long_val;
+    pb_field_long_t long_val;
 } pb_field_t;
 
 typedef struct {

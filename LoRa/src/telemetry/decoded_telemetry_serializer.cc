@@ -96,14 +96,14 @@ namespace {
      * Takes a vector of values and produces CSV output.
      * Each value is escaped and wrapped in quotes.
      */
-    std::string serialize_to_csv(const std::vector<std::string_view> &values) {
+    std::string serialize_to_csv(const std::vector<std::string> &values) {
         std::ostringstream csv;
 
         bool first = true;
         for (const auto &value : values) {
             if (!first)
                 csv << ",";
-            csv << escape_csv_field(std::string(value));
+            csv << escape_csv_field(value);
             first = false;
         }
 
