@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package lbr.telemetry.v1;
+
+/**
+ * @brief Core telemetry payload structure from LoRa module.
+ * 
+ * SINGLE SOURCE OF TRUTH FOR TELEMETRY SCHEMA:
+ * This proto file is the authoritative source for all telemetry field definitions.
+ * All C++ serialization and struct definitions are derived from this proto.
+ * 
+ * When extending this message with new fields:
+ * 1. Add field to this proto file (sequential field numbers only)
+ * 2. Regenerate nanopb code via: nanopb_generator LoRa/docs/telemetry-message.proto -d LoRa/include/telemetry
+ * 3. Add ONE entry to TELEMETRY_PROTO_FIELDS array (LoRa/include/telemetry/telemetry_fields.h)
+ *    - This automatically makes the field available in JSON/CSV serialization
+ * 4. Update Python GUI code only if the visual display mapping changes
+ * 
+ * No changes needed to:
+ * - TelemetryMessageSerializer::to_json() or to_csv() (they iterate TELEMETRY_PROTO_FIELDS)
+ * - serialization tests (they verify the struct fields and summary strings)
+ * 
+ * TELEMETRY_PROTO_FIELDS automatically includes the new field in all output formats.
+ */
+message TelemetryMessage {
+  uint32 field_1 = 1;
+  uint32 field_2 = 2;
+  uint32 field_3 = 3;
+  uint32 field_4 = 4;
+}

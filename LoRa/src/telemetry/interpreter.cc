@@ -1,37 +1,59 @@
 /**
- * @file interpreter.cc
- * @brief Lightweight telemetry payload interpreter
+ * @file LoRa/src/telemetry/interpreter.cc
+ * @brief Lightweight Telemetry payload interpreter
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
 
 #include "telemetry/interpreter.h"
+#include "telemetry/simulation_payloads.h"
+#include "telemetry/telemetry_fields.h"
+
+#include <pb_decode.h>
+#include "telemetry/telemetry-message.pb.h"
 
 #include <sstream>
 
-telemetry::DecodedTelemetry telemetry::Interpreter::decode(const uint8_t *payload,
-                                                          size_t payload_len) {
-    if (payload == nullptr)
-        return {false, "missing payload buffer"};
- 
-    // Minimal frame contract used for now:
-    // [0]=mode, [1..2]=altitude_m (LE), [3..4]=velocity_cms (LE), [5]=battery_percent
-    if (payload_len < 6)
-        return {false, "payload too short for telemetry_v1"};
+namespace {
+    /**
+     * @brief Maximum allowed telemetry payload size in bytes (256 bytes)
+     */
+    constexpr std::size_t kMaxTelemetryPayloadBytes = 256U;
+}
 
-    const uint8_t mode = payload[0];
-    const uint16_t altitude_m =
-        static_cast<uint16_t>(payload[1]) | (static_cast<uint16_t>(payload[2]) << 8);
-    const uint16_t velocity_cms =
-        static_cast<uint16_t>(payload[3]) | (static_cast<uint16_t>(payload[4]) << 8);
-    const uint8_t battery_percent = payload[5];
+bool Telemetry::TelemetryInterpreter::decode(const uint8_t *payload,
+                                            size_t payload_len,
+                                            TelemetryMessage &message,
+                                            std::string &summary,
+                                            std::string &decode_source) {
+    if (payload == nullptr || payload_len == 0) {
+        decode_source = "error";
+        summary = "null or empty payload";
+        return false;
+    }
 
-    std::ostringstream summary;
-    summary << "telemetry_v1"
-            << " mode=" << static_cast<int>(mode)
-            << " altitude_m=" << altitude_m
-            << " velocity_cms=" << velocity_cms
-            << " battery_percent=" << static_cast<int>(battery_percent);
+    if (payload_len > kMaxTelemetryPayloadBytes) {
+        decode_source = "error";
+        summary = "payload exceeds max size";
+        return false;
+    }
 
-    return {true, summary.str()};
+    pb_istream_t stream = pb_istream_from_buffer(payload, payload_len);
+    if (pb_decode(&stream, TelemetryMessage_fields, &message)) {
+        decode_source = "pb_decode";
+        summary = summarize_telemetry_message(message, decode_source);
+        return true;
+    }
+
+    decode_source = "error";
+    summary = "protobuf decode failed";
+    return false;
+}
+
+bool Telemetry::TelemetryInterpreter::nanopb_enabled() noexcept {
+    return true;  // nanopb is now required; fallback is no longer supported.
+}
+
+std::vector<std::uint8_t> Telemetry::TelemetryInterpreter::simulation_mock_payload() {
+    return simulation_mock_payload_bytes();
 }
