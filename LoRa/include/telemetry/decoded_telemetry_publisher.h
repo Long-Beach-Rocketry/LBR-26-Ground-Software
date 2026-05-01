@@ -9,6 +9,7 @@
 #define LORA_INCLUDE_TELEMETRY_DECODED_TELEMETRY_PUBLISHER_H_
 
 #include "telemetry/interpreter.h"
+#include "telemetry/payload_serializer.h"
 
 #include <cstdint>
 #include <string>
@@ -16,9 +17,9 @@
 namespace telemetry {
     class DecodedTelemetryPublisher {
         public:
-            DecodedTelemetryPublisher(std::string endpoint, std::string topic);
+            explicit DecodedTelemetryPublisher(std::string endpoint, std::string topic);
 
-            void publish(const DecodedTelemetry &decoded,
+            void publish(const Telemetry::DecodedTelemetry &decoded,
                          const std::string &source,
                          std::uint64_t sequence);
 
