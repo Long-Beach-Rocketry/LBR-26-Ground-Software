@@ -10,83 +10,68 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "telemetry/simulation_payloads.h"
 
+// REQUIRED: telemetry-message.pb.h must be generated via nanopb compiler.
+// If this header is missing, the build MUST fail to prevent silent fallback behavior.
+// Re-generate via: nanopb_generator LoRa/docs/telemetry-message.proto -d LoRa/include/telemetry
+#include "telemetry-message.pb.h"
+
 namespace Telemetry {
-    /**
-     * @brief Decoded Telemetry frame with structured fields and summary.
-     */
-    struct DecodedTelemetry {
-        bool decoded = false;
-        std::string summary;
-        std::uint32_t mode = 0;
-        std::uint32_t altitude_m = 0;
-        std::uint32_t velocity_cms = 0;
-        std::uint32_t battery_percent = 0;
-        std::string decode_source = "unknown";
-    };
-
-    /**
-     * @brief Helper to safely construct a DecodedTelemetry from structured values.
-     * 
-     * This ensures all accesses align with TELEMETRY_PROTO_FIELDS registry (see telemetry_fields.h).
-     * When adding a new field:
-     * 1. Add it to the TelemetryMessage proto
-     * 2. Add it to DecodedTelemetry struct above
-     * 3. Add one entry to TELEMETRY_PROTO_FIELDS 
-     * 4. Pass it here
-     */
-    inline DecodedTelemetry make_decoded_telemetry(
-        bool decoded,
-        std::string_view summary,
-        std::uint32_t mode,
-        std::uint32_t altitude_m,
-        std::uint32_t velocity_cms,
-        std::uint32_t battery_percent,
-        std::string_view decode_source) noexcept {
-        return {decoded, std::string(summary), mode, altitude_m, velocity_cms, battery_percent, std::string(decode_source)};
-    }
-
     class TelemetryInterpreter {
         public:
             /**
-             * @brief Attempts to decode a Telemetry payload into a human-readable summary.
+             * @brief Attempts to decode a Telemetry payload into a proto-backed message and summary.
              * @param payload Pointer to payload bytes.
              * @param payload_len Number of payload bytes.
-             * @return Decode status and summary text.
+             * @param message Output TelemetryMessage feed decoded from the payload.
+             * @param summary Output human-readable summary built from TELEMETRY_PROTO_FIELDS.
+             * @param decode_source Output decode source identifier.
+             * @return True when a payload was decoded successfully via protobuf.
              */
-            static DecodedTelemetry decode(const uint8_t *payload, size_t payload_len);
+            static bool decode(const uint8_t *payload,
+                               size_t payload_len,
+                               TelemetryMessage &message,
+                               std::string &summary,
+                               std::string &decode_source);
 
             /**
-             * @brief Decodes legacy FDCAN Telemetry payload format.
-             * @param payload Pointer to payload bytes.
-             * @param payload_len Number of payload bytes.
-             * @return Decode status and summary text.
-             */
-            static DecodedTelemetry fallback_decode(const uint8_t *payload, size_t payload_len);
-
-            /**
-             * @brief Returns a deterministic protobuf payload used by simulation Tests.
+             * @brief Returns a deterministic protobuf payload used by simulation tests.
              * @return Encoded protobuf payload bytes.
              */
             static std::vector<std::uint8_t> simulation_mock_payload();
 
             /**
              * @brief Indicates whether nanopb Telemetry decode support is compiled in.
-             * @return True when pb_decode based path is available.
+             * @return Always true; fallback is no longer supported.
              */
             static bool nanopb_enabled() noexcept;
 
-        private:
-            /**
-             * @brief Checks whether the payload matches the legacy FDCAN frame size.
-             * @param payload_len Payload length in bytes.
-             * @return True when the payload length is the expected legacy frame size.
-             */
-            static bool is_fdcan_legacy_payload(size_t payload_len) noexcept;
     };
+    
+        /**
+         * Compatibility struct for legacy `DecodedTelemetry` usages.
+         * Some compilation units (or merged branches) still reference
+         * `telemetry::DecodedTelemetry` or unqualified `DecodedTelemetry`.
+         * Provide a lightweight type here to avoid widespread refactors
+         * and restore CI buildability. Fields mirror the common summary
+         * fields used by publishers/serializers.
+         */
+        struct DecodedTelemetry {
+            bool decoded{false};
+            int mode{0};
+            int altitude_m{0};
+            int velocity_cms{0};
+            int battery_percent{0};
+            std::string decode_source;
+            std::string summary;
+        };
 
+
+    // Provide lowercase `telemetry` namespace alias and an unqualified alias
+    // so code referencing older names still compiles.
+    namespace telemetry = Telemetry;
+    using DecodedTelemetry = Telemetry::DecodedTelemetry;
 }
