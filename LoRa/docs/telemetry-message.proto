@@ -11,22 +11,20 @@ package lbr.telemetry.v1;
  * 
  * When extending this message with new fields:
  * 1. Add field to this proto file (sequential field numbers only)
- * 2. Regenerate nanopb code (if using nanopb compiler)
- * 3. Add corresponding field to Telemetry::DecodedTelemetry struct (LoRa/include/telemetry/interpreter.h)
- * 4. Add ONE entry to TELEMETRY_PROTO_FIELDS array (LoRa/include/telemetry/telemetry_fields.h)
+ * 2. Regenerate nanopb code via: nanopb_generator LoRa/docs/telemetry-message.proto -d LoRa/include/telemetry
+ * 3. Add ONE entry to TELEMETRY_PROTO_FIELDS array (LoRa/include/telemetry/telemetry_fields.h)
  *    - This automatically makes the field available in JSON/CSV serialization
- * 5. Update DecodedTelemetry factory methods (fallback_decode, decode) to populate the new field
- * 6. Update Python GUI code (gui/ui/widgets/packet_panel.py) if visual display needed
+ * 4. Update Python GUI code only if the visual display mapping changes
  * 
  * No changes needed to:
- * - DecodedTelemetrySerializer::to_json() or to_csv() (they iterate TELEMETRY_PROTO_FIELDS)
+ * - TelemetryMessageSerializer::to_json() or to_csv() (they iterate TELEMETRY_PROTO_FIELDS)
  * - serialization tests (they verify the struct fields and summary strings)
  * 
  * TELEMETRY_PROTO_FIELDS automatically includes the new field in all output formats.
  */
 message TelemetryMessage {
-  uint32 mode = 1;
-  uint32 altitude_m = 2;
-  uint32 velocity_cms = 3;
-  uint32 battery_percent = 4;
+  uint32 field_1 = 1;
+  uint32 field_2 = 2;
+  uint32 field_3 = 3;
+  uint32 field_4 = 4;
 }

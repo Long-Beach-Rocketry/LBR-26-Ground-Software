@@ -1,6 +1,6 @@
 /**
  * @file LoRa/tests/telemetry_serializer_tests.cc
- * @brief Unit Tests for TelemetrySerializer with dynamic field registry
+ * @brief Unit Tests for TelemetryMessageSerializer with dynamic field registry
  * @author Luis Fernandes (luisrobertantonio.fernandes01@student.csulb.edu)
  * @note Origin: Long Beach Rocketry
  */
@@ -12,19 +12,15 @@
 
 #include <algorithm>
 
-// ============================================================================
-// FIELD REGISTRY TESTS
-// ============================================================================
-
 TEST(TelemetrySerializerTests, FieldRegistryContainsFourProtoFields) {
     EXPECT_EQ(Telemetry::TELEMETRY_PROTO_FIELDS.size(), static_cast<size_t>(4));
 }
 
 TEST(TelemetrySerializerTests, FieldRegistryContainsCorrectFieldNames) {
-    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[0].name, "mode");
-    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[1].name, "altitude_m");
-    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[2].name, "velocity_cms");
-    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[3].name, "battery_percent");
+    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[0].name, "field_1");
+    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[1].name, "field_2");
+    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[2].name, "field_3");
+    EXPECT_STREQ(Telemetry::TELEMETRY_PROTO_FIELDS[3].name, "field_4");
 }
 
 TEST(TelemetrySerializerTests, FieldRegistryContainsCorrectFieldNumbers) {
@@ -35,170 +31,117 @@ TEST(TelemetrySerializerTests, FieldRegistryContainsCorrectFieldNumbers) {
 }
 
 TEST(TelemetrySerializerTests, FieldRegistryConvertsFunctionsWork) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 42;
-    data.altitude_m = 1000;
-    data.velocity_cms = 500;
-    data.battery_percent = 85;
-    data.decode_source = "test";
-    data.summary = "test summary";
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 42;
+    data.field_2 = 1000;
+    data.field_3 = 500;
+    data.field_4 = 85;
 
-    // Test each field's to_string_fn
     EXPECT_EQ(Telemetry::TELEMETRY_PROTO_FIELDS[0].to_string_fn(data), "42");
     EXPECT_EQ(Telemetry::TELEMETRY_PROTO_FIELDS[1].to_string_fn(data), "1000");
     EXPECT_EQ(Telemetry::TELEMETRY_PROTO_FIELDS[2].to_string_fn(data), "500");
     EXPECT_EQ(Telemetry::TELEMETRY_PROTO_FIELDS[3].to_string_fn(data), "85");
 }
 
-// ============================================================================
-// JSON SERIALIZATION TESTS
-// ============================================================================
-
 TEST(TelemetrySerializerTests, ToJsonIncludesAllProtoFields) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 2;
-    data.altitude_m = 16;
-    data.velocity_cms = 500;
-    data.battery_percent = 87;
-    data.decode_source = "fallback_fdcan";
-    data.summary = "mode=2,altitude_m=16,velocity_cms=500,battery_percent=87";
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 2;
+    data.field_2 = 16;
+    data.field_3 = 500;
+    data.field_4 = 87;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string json = serializer.to_json();
 
-    // Verify all proto fields are present
-    EXPECT_NE(json.find("\"mode\":\"2\""), std::string::npos);
-    EXPECT_NE(json.find("\"altitude_m\":\"16\""), std::string::npos);
-    EXPECT_NE(json.find("\"velocity_cms\":\"500\""), std::string::npos);
-    EXPECT_NE(json.find("\"battery_percent\":\"87\""), std::string::npos);
-
-    // Verify metadata fields are present
-    EXPECT_NE(json.find("\"decoded\":\"true\""), std::string::npos);
-    EXPECT_NE(json.find("\"decode_source\":\"fallback_fdcan\""), std::string::npos);
-    EXPECT_NE(json.find("\"summary\""), std::string::npos);
+    EXPECT_NE(json.find("\"field_1\":\"2\""), std::string::npos);
+    EXPECT_NE(json.find("\"field_2\":\"16\""), std::string::npos);
+    EXPECT_NE(json.find("\"field_3\":\"500\""), std::string::npos);
+    EXPECT_NE(json.find("\"field_4\":\"87\""), std::string::npos);
 }
 
 TEST(TelemetrySerializerTests, ToJsonHasValidJsonStructure) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 1;
-    data.altitude_m = 100;
-    data.velocity_cms = 200;
-    data.battery_percent = 50;
-    data.decode_source = "test";
-    data.summary = "test";
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 1;
+    data.field_2 = 100;
+    data.field_3 = 200;
+    data.field_4 = 50;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string json = serializer.to_json();
 
-    // Basic JSON structure checks
     EXPECT_EQ(json[0], '{');
     EXPECT_EQ(json[json.length() - 1], '}');
     EXPECT_NE(json.find(":"), std::string::npos);
 }
 
-TEST(TelemetrySerializerTests, ToJsonEscapesSpecialCharacters) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 1;
-    data.altitude_m = 100;
-    data.velocity_cms = 200;
-    data.battery_percent = 50;
-    data.decode_source = "test";
-    data.summary = R"(summary with "quotes" and \backslashes\)";
+TEST(TelemetrySerializerTests, ToJsonUsesGenericFieldNames) {
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 1;
+    data.field_2 = 100;
+    data.field_3 = 200;
+    data.field_4 = 50;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string json = serializer.to_json();
 
-    // Should contain escaped quotes and backslashes
-    EXPECT_NE(json.find("\\\""), std::string::npos);
-    EXPECT_NE(json.find("\\\\"), std::string::npos);
+    EXPECT_NE(json.find("field_1"), std::string::npos);
+    EXPECT_NE(json.find("field_2"), std::string::npos);
+    EXPECT_NE(json.find("field_3"), std::string::npos);
+    EXPECT_NE(json.find("field_4"), std::string::npos);
 }
-
-// ============================================================================
-// CSV SERIALIZATION TESTS
-// ============================================================================
 
 TEST(TelemetrySerializerTests, ToCsvIncludesAllProtoFields) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 2;
-    data.altitude_m = 16;
-    data.velocity_cms = 500;
-    data.battery_percent = 87;
-    data.decode_source = "fallback_fdcan";
-    data.summary = "test";
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 2;
+    data.field_2 = 16;
+    data.field_3 = 500;
+    data.field_4 = 87;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string csv = serializer.to_csv();
 
-    // CSV should have 7 fields (decoded + 4 proto + 2 metadata)
     const int comma_count = std::count(csv.begin(), csv.end(), ',');
-    EXPECT_EQ(comma_count, 6);  // 7 fields = 6 commas
+    EXPECT_EQ(comma_count, 3);
 
-    // Verify fields are present
-    EXPECT_NE(csv.find("\"2\""), std::string::npos);      // mode
-    EXPECT_NE(csv.find("\"16\""), std::string::npos);     // altitude_m
-    EXPECT_NE(csv.find("\"500\""), std::string::npos);    // velocity_cms
-    EXPECT_NE(csv.find("\"87\""), std::string::npos);     // battery_percent
+    EXPECT_NE(csv.find("\"2\""), std::string::npos);
+    EXPECT_NE(csv.find("\"16\""), std::string::npos);
+    EXPECT_NE(csv.find("\"500\""), std::string::npos);
+    EXPECT_NE(csv.find("\"87\""), std::string::npos);
 }
 
-TEST(TelemetrySerializerTests, ToCsvStartsWithDecodedFlag) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 1;
-    data.altitude_m = 100;
-    data.velocity_cms = 200;
-    data.battery_percent = 50;
-    data.decode_source = "test";
-    data.summary = "test";
+TEST(TelemetrySerializerTests, ToCsvStartsWithFirstProtoField) {
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 1;
+    data.field_2 = 100;
+    data.field_3 = 200;
+    data.field_4 = 50;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string csv = serializer.to_csv();
 
-    // First field should be "1" (decoded=true) wrapped in quotes
     EXPECT_EQ(csv.substr(0, 3), "\"1\"");
 }
 
 TEST(TelemetrySerializerTests, ToCsvHasAllEmptyFieldsQuoted) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = false;
-    data.mode = 0;
-    data.altitude_m = 0;
-    data.velocity_cms = 0;
-    data.battery_percent = 0;
-    data.decode_source = "";
-    data.summary = "";
+    TelemetryMessage data = TelemetryMessage_init_zero;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string csv = serializer.to_csv();
 
-    // All fields should be quoted even if empty
     EXPECT_NE(csv.find("\"0\""), std::string::npos);
-    EXPECT_NE(csv.find("\"\""), std::string::npos);  // empty quoted fields
 }
 
-// ============================================================================
-// CONSISTENCY TESTS
-// ============================================================================
-
 TEST(TelemetrySerializerTests, JsonAndCsvIncludeSameProtoFieldValues) {
-    Telemetry::DecodedTelemetry data;
-    data.decoded = true;
-    data.mode = 42;
-    data.altitude_m = 1000;
-    data.velocity_cms = 500;
-    data.battery_percent = 85;
-    data.decode_source = "test";
-    data.summary = "test";
+    TelemetryMessage data = TelemetryMessage_init_zero;
+    data.field_1 = 42;
+    data.field_2 = 1000;
+    data.field_3 = 500;
+    data.field_4 = 85;
 
-    Telemetry::DecodedTelemetrySerializer serializer(data);
+    Telemetry::TelemetryMessageSerializer serializer(data);
     const std::string json = serializer.to_json();
     const std::string csv = serializer.to_csv();
 
-    // Both should contain the same field values
     EXPECT_NE(json.find("42"), std::string::npos);
     EXPECT_NE(csv.find("42"), std::string::npos);
     EXPECT_NE(json.find("1000"), std::string::npos);

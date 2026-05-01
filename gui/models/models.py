@@ -38,12 +38,12 @@ class SDRConfig:
     # Helper property, converts MPSP to MHz for display
     def sample_rate_mhz(self):
         return self.sample_rate_hz / 1_000_000
-    
+
     @property
     #Helper property, converts Hz to MHz for displays
     def center_freq_mhz(self):
         return self.center_freq_hz / 1_000_000
-    
+
 """ Telelemtry Frame """
 # Constant values tied to TelelmtryFrame class
 @dataclass
