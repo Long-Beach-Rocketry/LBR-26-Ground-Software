@@ -156,12 +156,198 @@ jobs:
           path: lbr-nightly-windows-ucrt64-x64.zip
           retention-days: 14
 
+  nightly-gui-linux:
+    name: Nightly Linux GUI Artifact
+    runs-on: ubuntu-latest
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Qt runtime library
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=3 update &&
+            sudo apt-get -o Acquire::Retries=3 install -y libegl1 &&
+            break
+            if [ "$attempt" = "3" ]; then
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Install GUI Python deps
+        run: python -m pip install -r gui/requirements-dev.txt
+
+      - name: Run GUI tests
+        run: python -m pytest gui/tests
+
+      - name: Build GUI onefile binary
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --onefile \
+            --name lbr-ground-gui \
+            --paths gui \
+            gui/main.py
+          chmod +x dist/lbr-ground-gui
+
+      - name: Package Linux GUI binary
+        run: |
+          mkdir -p nightly/gui-linux-x64/bin
+          cp dist/lbr-ground-gui nightly/gui-linux-x64/bin/
+          sha256sum nightly/gui-linux-x64/bin/* > nightly/gui-linux-x64/SHA256SUMS
+          tar -czf lbr-nightly-gui-linux-x64.tar.gz -C nightly gui-linux-x64
+
+      - name: Upload Linux GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-gui-linux-x64
+          path: lbr-nightly-gui-linux-x64.tar.gz
+          retention-days: 14
+
+  nightly-gui-windows:
+    name: Nightly Windows GUI Artifact
+    runs-on: windows-latest
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install GUI Python deps
+        shell: powershell
+        run: python -m pip install -r gui/requirements-dev.txt
+
+      - name: Run GUI tests
+        shell: powershell
+        run: python -m pytest gui/tests
+
+      - name: Build GUI onefile binary
+        shell: powershell
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --name lbr-ground-gui `
+            --paths gui `
+            gui/main.py
+
+      - name: Package Windows GUI binary
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path nightly/gui-windows-x64/bin | Out-Null
+          Copy-Item dist/lbr-ground-gui.exe nightly/gui-windows-x64/bin/
+          Get-FileHash nightly/gui-windows-x64/bin/* -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $($_.Path | Split-Path -Leaf)" } |
+            Set-Content nightly/gui-windows-x64/SHA256SUMS
+          Compress-Archive -Path nightly/gui-windows-x64 -DestinationPath lbr-nightly-gui-windows-x64.zip -Force
+
+      - name: Upload Windows GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-gui-windows-x64
+          path: lbr-nightly-gui-windows-x64.zip
+          retention-days: 14
+
+  nightly-windows-installer:
+    name: Nightly Windows Installer
+    runs-on: windows-latest
+    needs:
+      - nightly-linux
+      - nightly-windows
+      - nightly-gui-windows
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Windows CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lbr-nightly-windows-ucrt64-x64
+          path: installer-artifacts/cli
+
+      - name: Download Windows GUI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lbr-nightly-gui-windows-x64
+          path: installer-artifacts/gui
+
+      - name: Download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lbr-nightly-docs-html
+          path: installer-artifacts/docs
+
+      - name: Prepare installer payload
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path installer-input | Out-Null
+          New-Item -ItemType Directory -Force -Path installer-input/docs | Out-Null
+          Expand-Archive -Path installer-artifacts/cli/lbr-nightly-windows-ucrt64-x64.zip -DestinationPath installer-input -Force
+          Expand-Archive -Path installer-artifacts/gui/lbr-nightly-gui-windows-x64.zip -DestinationPath installer-input -Force
+          tar -xzf installer-artifacts/docs/lbr-nightly-docs-html.tar.gz -C installer-input/docs
+          Get-ChildItem -Recurse installer-input
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup --no-progress -y
+
+      - name: Build setup exe
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path installer-output | Out-Null
+          $sourceDir = (Resolve-Path installer-input).Path
+          $outputDir = (Resolve-Path installer-output).Path
+          $version = "0.1.$env:GITHUB_RUN_NUMBER"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = (Get-Command ISCC.exe).Source
+          }
+          & $iscc "/DSourceDir=$sourceDir" "/DOutputDir=$outputDir" "/DAppVersion=$version" installer/windows/lbr-ground-installer.iss
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          Get-FileHash installer-output/lbr-nightly-windows-setup.exe -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  lbr-nightly-windows-setup.exe" } |
+            Set-Content installer-output/lbr-nightly-windows-setup.sha256
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lbr-nightly-windows-setup
+          path: |
+            installer-output/lbr-nightly-windows-setup.exe
+            installer-output/lbr-nightly-windows-setup.sha256
+          retention-days: 14
+
   publish-nightly:
     name: Publish Nightly Developer Release
     runs-on: ubuntu-latest
     needs:
       - nightly-linux
       - nightly-windows
+      - nightly-gui-linux
+      - nightly-gui-windows
+      - nightly-windows-installer
 
     steps:
       - name: Checkout
@@ -206,4 +392,8 @@ jobs:
           files: |
             nightly-artifacts/lbr-nightly-linux-x64/lbr-nightly-linux-x64.tar.gz
             nightly-artifacts/lbr-nightly-windows-ucrt64-x64/lbr-nightly-windows-ucrt64-x64.zip
+            nightly-artifacts/lbr-nightly-gui-linux-x64/lbr-nightly-gui-linux-x64.tar.gz
+            nightly-artifacts/lbr-nightly-gui-windows-x64/lbr-nightly-gui-windows-x64.zip
+            nightly-artifacts/lbr-nightly-windows-setup/lbr-nightly-windows-setup.exe
+            nightly-artifacts/lbr-nightly-windows-setup/lbr-nightly-windows-setup.sha256
             nightly-artifacts/lbr-nightly-docs-html/lbr-nightly-docs-html.tar.gz
