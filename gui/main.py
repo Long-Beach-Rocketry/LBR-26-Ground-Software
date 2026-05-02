@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 @File:   main.py
 @Brief:  Main file which gets everything running
