@@ -20,7 +20,6 @@ def _qapp():
         app = QApplication([])
     return app
 
-
 def test_mock_data_source_emits_frames():
     _qapp()
     source = MockDataSource(interval_ms=1000)
