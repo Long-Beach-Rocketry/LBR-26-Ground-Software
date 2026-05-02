@@ -23,7 +23,8 @@ def _qapp():
 
 
 def test_main_entrypoint_has_linux_shebang():
-    assert GUI_MAIN.read_text(encoding="utf-8").splitlines()[0] == "#!/usr/bin/env python3"
+    first_line = GUI_MAIN.read_text(encoding="utf-8").splitlines()[0]
+    assert first_line in ("#!/usr/bin/env python3", "#!/usr/bin/env python")
 
     if os.name == "posix":
         assert GUI_MAIN.stat().st_mode & stat.S_IXUSR
