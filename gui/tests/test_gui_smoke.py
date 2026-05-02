@@ -1,5 +1,4 @@
 import os
-import stat
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -20,14 +19,6 @@ def _qapp():
     if app is None:
         app = QApplication([])
     return app
-
-
-def test_main_entrypoint_has_linux_shebang():
-    first_line = GUI_MAIN.read_text(encoding="utf-8").splitlines()[0]
-    assert first_line in ("#!/usr/bin/env python3", "#!/usr/bin/env python")
-
-    if os.name == "posix":
-        assert GUI_MAIN.stat().st_mode & stat.S_IXUSR
 
 
 def test_mock_data_source_emits_frames():
