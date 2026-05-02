@@ -37,6 +37,7 @@ PrivilegesRequired=lowest
 CloseApplications=yes
 RestartApplications=no
 UsePreviousAppDir=yes
+ChangesEnvironment=yes
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\gui\{#AppExeName}
 VersionInfoCompany={#AppPublisher}
@@ -75,9 +76,8 @@ Type: filesandordirs; Name: "{app}\docs"
 [Code]
 const
   EnvironmentKey = 'Environment';
-  HWND_BROADCAST = $FFFF;
-  WM_SETTINGCHANGE = $001A;
-  SMTO_ABORTIFHUNG = $0002;
+  AppRegistryKey = 'Software\Long Beach Rocketry\LBR-26 Ground Software';
+  AddedToUserPathValue = 'AddedToUserPath';
 
 function TrimSemicolons(Value: string): string;
 begin
@@ -95,21 +95,6 @@ begin
   Result := Pos(';' + Lowercase(Entry) + ';', ';' + Lowercase(PathValue) + ';') > 0;
 end;
 
-procedure BroadcastEnvironmentChange();
-var
-  ResultCode: Longint;
-begin
-  SendMessageTimeout(
-    HWND_BROADCAST,
-    WM_SETTINGCHANGE,
-    0,
-    'Environment',
-    SMTO_ABORTIFHUNG,
-    5000,
-    ResultCode
-  );
-end;
-
 procedure AddToUserPath(Entry: string);
 var
   PathValue: string;
@@ -124,8 +109,10 @@ begin
     else
       PathValue := PathValue + ';' + Entry;
 
-    RegWriteStringValue(HKCU, EnvironmentKey, 'Path', PathValue);
-    BroadcastEnvironmentChange();
+    if not RegWriteStringValue(HKCU, EnvironmentKey, 'Path', PathValue) then
+      RaiseException('Failed to update the current user PATH.');
+
+    RegWriteDWordValue(HKCU, AppRegistryKey, AddedToUserPathValue, 1);
   end;
 end;
 
@@ -144,8 +131,6 @@ begin
     RegDeleteValue(HKCU, EnvironmentKey, 'Path')
   else
     RegWriteStringValue(HKCU, EnvironmentKey, 'Path', PathValue);
-
-  BroadcastEnvironmentChange();
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -155,7 +140,16 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  AddedToUserPath: Cardinal;
 begin
-  if CurUninstallStep = usPostUninstall then
+  if CurUninstallStep <> usPostUninstall then
+    Exit;
+
+  if RegQueryDWordValue(HKCU, AppRegistryKey, AddedToUserPathValue, AddedToUserPath) and
+     (AddedToUserPath = 1) then
+  begin
     RemoveFromUserPath(ExpandConstant('{app}\bin'));
+    RegDeleteValue(HKCU, AppRegistryKey, AddedToUserPathValue);
+  end;
 end;

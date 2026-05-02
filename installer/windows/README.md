@@ -17,5 +17,6 @@ The installer:
 Build locally after preparing `installer-input` with:
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\prepare-installer-input.ps1
 iscc /DSourceDir="$PWD\installer-input" /DOutputDir="$PWD\installer-output" installer\windows\lbr-ground-installer.iss
 ```

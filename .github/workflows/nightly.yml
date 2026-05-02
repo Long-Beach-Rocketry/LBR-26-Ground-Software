@@ -300,11 +300,7 @@ jobs:
       - name: Prepare installer payload
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path installer-input | Out-Null
-          New-Item -ItemType Directory -Force -Path installer-input/docs | Out-Null
-          Expand-Archive -Path installer-artifacts/cli/lbr-nightly-windows-ucrt64-x64.zip -DestinationPath installer-input -Force
-          Expand-Archive -Path installer-artifacts/gui/lbr-nightly-gui-windows-x64.zip -DestinationPath installer-input -Force
-          tar -xzf installer-artifacts/docs/lbr-nightly-docs-html.tar.gz -C installer-input/docs
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\prepare-installer-input.ps1 -ArtifactDir installer-artifacts -OutputDir installer-input
           Get-ChildItem -Recurse installer-input
 
       - name: Install Inno Setup
