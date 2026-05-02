@@ -34,5 +34,6 @@ Generated files are written to:
 ## Notes
 
 - `connector-message.nanopb.options` defines bounded field sizes for nanopb.
+- `checksum_hex` is optional envelope metadata; the ground side does not require the embedded side to compute or validate it for transport acceptance.
 - Keep schema changes backward-compatible when possible (increment semantic contract version in metadata when needed).
 - ZeroMQ/UDP/TCP transports carry serialized bytes; transport and schema evolution should remain decoupled.

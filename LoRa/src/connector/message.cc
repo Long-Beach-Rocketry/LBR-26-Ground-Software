@@ -6,8 +6,8 @@
  */
 
 #include "connector/message.h"
-#include "connector/checksum.h"
 
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <sstream>
@@ -112,6 +112,14 @@ namespace {
         return output;
     }
 
+    bool is_valid_checksum_hex(const std::string &checksum_hex) {
+        if (checksum_hex.size() != 8U)
+            return false;
+
+        return std::all_of(checksum_hex.begin(), checksum_hex.end(),
+                           [](unsigned char character) { return std::isxdigit(character) != 0; });
+    }
+
     template <typename T>
     T read_required_scalar(const YAML::Node &root, const char *field_name) {
         const YAML::Node node = root[field_name];
@@ -157,17 +165,6 @@ std::string connector::ConnectorMessage::to_json() const {
     if (source.empty())
         throw std::runtime_error("source must not be empty.");
 
-    std::string checksum_to_emit;
-    if (checksum_hex.has_value()) {
-        if (!is_valid_crc32_hex(*checksum_hex))
-            throw std::runtime_error("checksum_hex must be 8 hexadecimal characters.");
-        if (!validate_crc32(payload.data(), payload.size(), *checksum_hex))
-            throw std::runtime_error("checksum_hex does not match payload CRC32.");
-        checksum_to_emit = *checksum_hex;
-    } else {
-        checksum_to_emit = compute_crc32_hex(payload.data(), payload.size());
-    }
-
     std::ostringstream output;
     output << '{'
            << "\"schema_version\":" << schema_version << ','
@@ -175,8 +172,13 @@ std::string connector::ConnectorMessage::to_json() const {
            << "\"sequence\":" << sequence << ','
            << "\"timestamp_ms\":" << timestamp_ms << ','
            << "\"source\":" << escape_json_string(source) << ','
-           << "\"payload_b64\":" << escape_json_string(base64_encode(payload)) << ','
-           << "\"checksum_hex\":" << escape_json_string(checksum_to_emit);
+           << "\"payload_b64\":" << escape_json_string(base64_encode(payload));
+
+    if (checksum_hex.has_value()) {
+        if (!is_valid_checksum_hex(*checksum_hex))
+            throw std::runtime_error("checksum_hex must be 8 hexadecimal characters.");
+        output << ',' << "\"checksum_hex\":" << escape_json_string(*checksum_hex);
+    }
 
     if (!metadata.empty()) {
         output << ',' << "\"metadata\":{";
@@ -226,11 +228,9 @@ connector::ConnectorMessage connector::ConnectorMessage::from_json(const std::st
     if (checksum_node) {
         if (!checksum_node.IsScalar())
             throw std::runtime_error("checksum_hex must be a string.");
-        // Ground side currently treats checksum as envelope metadata:
-        // validate format only, defer payload-match enforcement to link-layer/driver.
         const std::string checksum = checksum_node.as<std::string>();
         if (!checksum.empty()) {
-            if (!is_valid_crc32_hex(checksum))
+            if (!is_valid_checksum_hex(checksum))
                 throw std::runtime_error("checksum_hex must be 8 hexadecimal characters.");
             message.checksum_hex = checksum;
         }

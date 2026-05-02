@@ -149,7 +149,6 @@ lbr_enable_coverage(lora_periph)
 
 add_library(connector
     src/connector/message.cc
-    src/connector/checksum.cc
     src/connector/ndjson_file.cc
     src/connector/local_tcp_transport.cc
     src/connector/local_udp_transport.cc

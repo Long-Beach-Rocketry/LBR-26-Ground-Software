@@ -1,9 +1,9 @@
 /**
- * @file LoRa/src/connector/checksum.cc
- * @brief Checksum implementation
+ * @file LoRa/archive/connector/checksum.cc
+ * @brief Archived checksum implementation
  */
 
-#include "connector/checksum.h"
+#include "checksum.h"
 
 #include <algorithm>
 #include <cctype>

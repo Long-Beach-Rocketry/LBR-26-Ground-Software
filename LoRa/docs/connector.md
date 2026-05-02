@@ -85,7 +85,7 @@ Required fields:
 
 Optional fields:
 
-- `checksum_hex`: integrity marker in hexadecimal if the producer wants it
+- `checksum_hex`: optional hexadecimal integrity marker provided by the producer; the ground side preserves it if present but does not compute or validate it against the payload
 - `metadata`: extra implementation-specific fields that do not change the contract
 
 The envelope is intentionally extensible so teams can introduce protocol-specific message types
@@ -106,6 +106,12 @@ Example message:
 ```
 
 That structure is enough for the other team to build a consumer without coupling it to the radio implementation.
+
+Checksum policy:
+
+- The ground software does not own payload CRC generation or verification for this envelope.
+- If a producer includes `checksum_hex`, the connector treats it as passthrough metadata.
+- The archived CRC helper remains available only as historical reference, not as an active contract requirement.
 
 ## Lifecycle
 
