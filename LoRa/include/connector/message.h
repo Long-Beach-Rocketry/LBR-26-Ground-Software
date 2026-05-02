@@ -50,6 +50,9 @@ namespace connector {
         std::int64_t timestamp_ms = 0;
         std::string source = "simulated";
         std::vector<std::uint8_t> payload;
+        /**
+         * @brief Optional producer-provided checksum metadata forwarded by the ground connector.
+         */
         std::optional<std::string> checksum_hex;
         std::map<std::string, std::string> metadata;
 

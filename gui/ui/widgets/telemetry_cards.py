@@ -1,11 +1,11 @@
 """
-@File:   telemtry_cards.py
-@Brief:  a
+@File:   telemetry_cards.py
+@Brief:  Telemetry metric cards widget
 @Author: Mario Cruz
 @Orgin:  Long Beach Rocketry
 
 Description:
-    a
+    Metric-card UI panel that displays live telemetry values and alerts.
 """
 
 from PySide6.QtCore import Qt
@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from models.models import TelemetryFrame
+from .packet_panel_formatting import raw_value, get_field_unit
+from .alert_rules import default_alert_rules
 
 class MetricCard(QFrame):
     def __init__(self, label, unit, parent = None):
@@ -55,7 +57,14 @@ class MetricCard(QFrame):
         self._apply_normal_style()
 
     def set_value(self, value, decimals = 1):
-        self._value.setText(f"{value:.{decimals}f}")
+        if value is None:
+            self._value.setText("-")
+            return
+
+        try:
+            self._value.setText(f"{value:.{decimals}f}")
+        except (TypeError, ValueError):
+            self._value.setText(str(value))
 
     def set_alert(self, is_alert):
         if is_alert:
@@ -107,9 +116,16 @@ class SectionHeader(QLabel):
         )
     
 class TelemetryCardsPanel(QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, alert_rules = None):
         super().__init__(parent)
+        self._alert_rules = alert_rules or default_alert_rules()
         self._build_ui()
+
+    def _is_alert(self, metric_key, value):
+        rule = self._alert_rules.get(metric_key)
+        if rule is None:
+            return False
+        return rule.is_alert(value)
     
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -121,9 +137,9 @@ class TelemetryCardsPanel(QWidget):
         flight_grid = QGridLayout()
         flight_grid.setSpacing(10)
 
-        self._alt = MetricCard("Altitude", "m")
-        self._vel = MetricCard("Velocity", "m/s")
-        self._accel = MetricCard("Acceleration", "m/s")
+        self._alt = MetricCard("Altitude", get_field_unit("altitude"))
+        self._vel = MetricCard("Velocity", get_field_unit("velocity"))
+        self._accel = MetricCard("Acceleration", get_field_unit("accel"))
 
         flight_grid.addWidget(self._alt, 0, 0)
         flight_grid.addWidget(self._vel, 0, 1)
@@ -135,9 +151,9 @@ class TelemetryCardsPanel(QWidget):
         sys_grid = QGridLayout()
         sys_grid.setSpacing(10)
 
-        self._temp = MetricCard("Temperature", "C")
-        self._battery = MetricCard("Battery", "V")
-        self._pressure = MetricCard("Pressure", "Pa")
+        self._temp = MetricCard("Temperature", get_field_unit("temp"))
+        self._battery = MetricCard("Battery", get_field_unit("battery"))
+        self._pressure = MetricCard("Pressure", get_field_unit("pressure"))
 
         sys_grid.addWidget(self._temp, 0, 0)
         sys_grid.addWidget(self._battery, 0, 1)
@@ -149,8 +165,8 @@ class TelemetryCardsPanel(QWidget):
         rf_grid = QGridLayout()
         rf_grid.setSpacing(10)
 
-        self._rssi = MetricCard("RSSI", "dBm")
-        self._pkt_cnt = MetricCard("Packets", "rx")
+        self._rssi = MetricCard("RSSI", get_field_unit("signal"))
+        self._pkt_cnt = MetricCard("Packets", get_field_unit("pkt_count", "count"))
 
         rf_grid.addWidget(self._rssi, 0, 0)
         rf_grid.addWidget(self._pkt_cnt, 0, 1)
@@ -160,20 +176,31 @@ class TelemetryCardsPanel(QWidget):
         root.addStretch()
 
     def update_frame(self, frame: TelemetryFrame):
-        self._alt.set_value(frame.altitude, 1)
-        self._vel.set_value(frame.velocity, 1)
-        self._accel.set_value(frame.acceleration, 2)
+        alt = raw_value(frame, "altitude")
+        vel = raw_value(frame, "velocity")
+        accel = raw_value(frame, "accel")
 
-        self._temp.set_value(frame.temperature, 1)
-        self._temp.set_alert(frame.temperature > 80)
+        temp = raw_value(frame, "temp")
+        battery = raw_value(frame, "battery")
+        pressure = raw_value(frame, "pressure")
 
-        self._battery.set_value(frame.battery, 2)
-        self._battery.set_alert(frame.battery < 5.0)
+        signal = raw_value(frame, "signal")
+        pkt_cnt = raw_value(frame, "pkt_count")
 
-        self._pressure.set_value(frame.pressure_pa, 0)
-        self._pressure.set_alert(frame.pressure_pa < 50000)
+        self._alt.set_value(alt, 1)
+        self._vel.set_value(vel, 1)
+        self._accel.set_value(accel, 2)
 
-        self._rssi.set_value(frame.signal, 1)
-        self._rssi.set_alert(frame.signal < -90)
+        self._temp.set_value(temp, 1)
+        self._temp.set_alert(self._is_alert("temp", temp))
 
-        self._pkt_cnt.set_value(float(frame.packet_count), 0)
+        self._battery.set_value(battery, 2)
+        self._battery.set_alert(self._is_alert("battery", battery))
+
+        self._pressure.set_value(pressure, 0)
+        self._pressure.set_alert(self._is_alert("pressure", pressure))
+
+        self._rssi.set_value(signal, 1)
+        self._rssi.set_alert(self._is_alert("signal", signal))
+
+        self._pkt_cnt.set_value(float(pkt_cnt) if pkt_cnt is not None else None, 0)

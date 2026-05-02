@@ -34,7 +34,7 @@ TEST(ConnectorTests, MessageRoundTripJson) {
     message.timestamp_ms = 1234567890;
     message.source = "sx1262";
     message.payload = {0x01, 0x02, 0x03, 0x04};
-    message.checksum_hex = "AB12";
+    message.checksum_hex = "deadbeef";
     message.metadata["frame_type"] = "telemetry";
 
     const std::string json_text = message.to_json();
@@ -47,7 +47,7 @@ TEST(ConnectorTests, MessageRoundTripJson) {
     EXPECT_EQ(parsed.source, std::string("sx1262"));
     EXPECT_EQ(parsed.payload, message.payload);
     EXPECT_TRUE(parsed.checksum_hex.has_value());
-    EXPECT_EQ(*parsed.checksum_hex, "AB12");
+    EXPECT_EQ(*parsed.checksum_hex, "deadbeef");
     EXPECT_EQ(parsed.metadata.at("frame_type"), "telemetry");
 }
 
@@ -72,12 +72,53 @@ TEST(ConnectorTests, MessageRoundTripWithoutOptionalFields) {
     message.source = "sx127";
     message.payload = {0x10};
 
-    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(message.to_json());
+    const std::string json_text = message.to_json();
+    EXPECT_EQ(json_text.find("\"checksum_hex\""), std::string::npos);
+
+    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(json_text);
     EXPECT_EQ(parsed.sequence, 12u);
     EXPECT_EQ(parsed.timestamp_ms, 333);
     EXPECT_EQ(parsed.source, std::string("sx127"));
     EXPECT_FALSE(parsed.checksum_hex.has_value());
     EXPECT_TRUE(parsed.metadata.empty());
+}
+
+TEST(ConnectorTests, MessageToJsonPreservesProvidedChecksum) {
+    connector::ConnectorMessage message;
+    message.sequence = 1;
+    message.timestamp_ms = 2;
+    message.source = "simulated";
+    message.payload = {0x01, 0x02, 0x03};
+    message.checksum_hex = "deadbeef";
+
+    const std::string json = message.to_json();
+    EXPECT_NE(json.find("\"checksum_hex\":\"deadbeef\""), std::string::npos);
+}
+
+TEST(ConnectorTests, MessageFromJsonPreservesProvidedChecksum) {
+    const std::string invalid_checksum =
+        R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"sx1262","payload_b64":"AQ==","checksum_hex":"deadbeef"})";
+    const connector::ConnectorMessage parsed = connector::ConnectorMessage::from_json(invalid_checksum);
+    EXPECT_TRUE(parsed.checksum_hex.has_value());
+    EXPECT_EQ(*parsed.checksum_hex, "deadbeef");
+}
+
+TEST(ConnectorTests, MessageToJsonRejectsInvalidChecksumFormat) {
+    connector::ConnectorMessage message;
+    message.sequence = 1;
+    message.timestamp_ms = 2;
+    message.source = "simulated";
+    message.payload = {0x01, 0x02, 0x03};
+    message.checksum_hex = "xyz";
+
+    EXPECT_THROW(static_cast<void>(message.to_json()), std::runtime_error);
+}
+
+TEST(ConnectorTests, MessageFromJsonRejectsInvalidChecksumFormat) {
+    const std::string invalid_checksum =
+        R"({"schema_version":1,"message_type":"telemetry_frame","sequence":1,"timestamp_ms":1,"source":"sx1262","payload_b64":"AQ==","checksum_hex":"xyz"})";
+    EXPECT_THROW(static_cast<void>(connector::ConnectorMessage::from_json(invalid_checksum)),
+                 std::runtime_error);
 }
 
 TEST(ConnectorTests, MessageToJsonRejectsUnsupportedSchemaVersion) {

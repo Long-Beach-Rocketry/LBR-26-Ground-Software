@@ -1,5 +1,6 @@
 # Nanopb field constraints for lbr.connector.v1.ConnectorMessage
 # Keep this aligned with connector-message.proto for embedded compatibility.
+# checksum_hex is optional and treated as passthrough metadata by the ground connector.
 
 lbr.connector.v1.ConnectorMessage.message_type max_size:48
 lbr.connector.v1.ConnectorMessage.source max_size:48

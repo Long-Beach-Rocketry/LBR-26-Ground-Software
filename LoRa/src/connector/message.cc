@@ -7,6 +7,7 @@
 
 #include "connector/message.h"
 
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <sstream>
@@ -111,6 +112,14 @@ namespace {
         return output;
     }
 
+    bool is_valid_checksum_hex(const std::string &checksum_hex) {
+        if (checksum_hex.size() != 8U)
+            return false;
+
+        return std::all_of(checksum_hex.begin(), checksum_hex.end(),
+                           [](unsigned char character) { return std::isxdigit(character) != 0; });
+    }
+
     template <typename T>
     T read_required_scalar(const YAML::Node &root, const char *field_name) {
         const YAML::Node node = root[field_name];
@@ -165,8 +174,11 @@ std::string connector::ConnectorMessage::to_json() const {
            << "\"source\":" << escape_json_string(source) << ','
            << "\"payload_b64\":" << escape_json_string(base64_encode(payload));
 
-    if (checksum_hex.has_value())
+    if (checksum_hex.has_value()) {
+        if (!is_valid_checksum_hex(*checksum_hex))
+            throw std::runtime_error("checksum_hex must be 8 hexadecimal characters.");
         output << ',' << "\"checksum_hex\":" << escape_json_string(*checksum_hex);
+    }
 
     if (!metadata.empty()) {
         output << ',' << "\"metadata\":{";
@@ -217,8 +229,11 @@ connector::ConnectorMessage connector::ConnectorMessage::from_json(const std::st
         if (!checksum_node.IsScalar())
             throw std::runtime_error("checksum_hex must be a string.");
         const std::string checksum = checksum_node.as<std::string>();
-        if (!checksum.empty())
+        if (!checksum.empty()) {
+            if (!is_valid_checksum_hex(checksum))
+                throw std::runtime_error("checksum_hex must be 8 hexadecimal characters.");
             message.checksum_hex = checksum;
+        }
     }
 
     const YAML::Node metadata_node = root["metadata"];

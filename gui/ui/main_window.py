@@ -27,7 +27,8 @@ from ui.widgets.status_bar import StatusBar
 from ui.widgets.telemetry_cards import TelemetryCardsPanel
 from ui.widgets.graphs_panel import GraphsPanel
 from ui.widgets.terminal_panel import TerminalPanel
-from ui.widgets.packet_viewer import PacketViewerPanel
+from ui.widgets.packet_panel import PacketPanel
+from ui.widgets.packet_panel_formatting import raw_value
 
 class MainWindow(QMainWindow):
     def __init__(self, datasource: DataSource):
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
         self._terminal = TerminalPanel()
         self._tabs.addTab(self._terminal, "💻  Terminal")
  
-        self._packet_viewer = PacketViewerPanel()
+        self._packet_viewer = PacketPanel()
         self._tabs.addTab(self._packet_viewer, "📦  Packets")
 
         splitter.addWidget(self._tabs)
@@ -169,12 +170,20 @@ class MainWindow(QMainWindow):
         self._cards.update_frame(frame)
         self._graphs.update_frame(frame)
 
+        pkt_count = raw_value(frame, "pkt_count")
+        alt = raw_value(frame, "altitude")
+        vel = raw_value(frame, "velocity")
+        pres = raw_value(frame, "pressure")
+        rssi = raw_value(frame, "signal")
+
+        pkt_str = f"{int(pkt_count):04d}" if pkt_count is not None else "----"
+        alt_str = f"{alt:.1f}m" if alt is not None else "-m"
+        vel_str = f"{vel:.1f}m/s" if vel is not None else "-m/s"
+        pres_str = f"{pres:.0f}Pa" if pres is not None else "-Pa"
+        rssi_str = f"{rssi:.1f}dBm" if rssi is not None else "-dBm"
+
         self._log.log_debug(
-            f"pkt {frame.packet_count:04d}"
-            f"alt = {frame.altitude:.1f}m"
-            f"vel = {frame.velocity:.1f}m/s"
-            f"pres = {frame.pressure_pa:.0f}Pa"
-            f"rssi = {frame.signal:.1f}dBm"
+            f"pkt {pkt_str} alt = {alt_str} vel = {vel_str} pres = {pres_str} rssi = {rssi_str}"
         )
     
     def _on_status_change(self, status: SystemStatus):

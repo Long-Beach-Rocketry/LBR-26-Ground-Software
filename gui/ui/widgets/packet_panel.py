@@ -2,7 +2,10 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGroupBox, QFormLayout, QLabel, QTextEdit
 )
 
-class PacketViewerPanel(QWidget):
+from .packet_panel_formatting import format_packet_view
+
+
+class PacketPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -62,27 +65,26 @@ class PacketViewerPanel(QWidget):
         layout.addWidget(self._messages_text)
 
     def update_packet(self, packet):
-        self._packet_id.setText(str(packet.packet_id))
-        self._unix_ms.setText(str(packet.time.unix_ms))
-        self._iso_time.setText(packet.time.iso_time)
+        values = format_packet_view(packet)
 
-        self._altitude.setText(f"{packet.data.altitude_m:.2f} m")
-        self._velocity.setText(f"{packet.data.velocity_mps:.2f} m/s")
-        self._accel.setText(f"{packet.data.acceleration_mps2:.2f} m/s²")
-        self._temp.setText(f"{packet.data.temperature_c:.2f} C")
-        self._battery.setText(f"{packet.data.battery_v:.2f} V")
-        self._pressure.setText(f"{packet.data.pressure_pa:.2f} Pa")
-        self._signal.setText(f"{packet.data.signal_dbm:.2f} dBm")
-        self._pkt_count.setText(str(packet.data.packet_count))
+        self._packet_id.setText(values["packet_id"])
+        self._unix_ms.setText(values["unix_ms"])
+        self._iso_time.setText(values["iso_time"])
 
-        self._conn_state.setText(str(packet.status.connection_state))
-        self._device.setText(packet.status.device)
-        self._pkts_rx.setText(str(packet.status.packets_received))
-        self._pkts_lost.setText(str(packet.status.packets_lost))
-        self._uptime.setText(f"{packet.status.uptime_seconds:.1f} s")
-        self._status_text.setText(packet.status.status_text)
+        self._altitude.setText(values["altitude"])
+        self._velocity.setText(values["velocity"])
+        self._accel.setText(values["accel"])
+        self._temp.setText(values["temp"])
+        self._battery.setText(values["battery"])
+        self._pressure.setText(values["pressure"])
+        self._signal.setText(values["signal"])
+        self._pkt_count.setText(values["pkt_count"])
 
-        lines = []
-        for msg in packet.messages:
-            lines.append(f"[{msg.level}] {msg.text}")
-        self._messages_text.setPlainText("\n".join(lines))
+        self._conn_state.setText(values["conn_state"])
+        self._device.setText(values["device"])
+        self._pkts_rx.setText(values["pkts_rx"])
+        self._pkts_lost.setText(values["pkts_lost"])
+        self._uptime.setText(values["uptime"])
+        self._status_text.setText(values["status_text"])
+
+        self._messages_text.setPlainText(values["messages"])

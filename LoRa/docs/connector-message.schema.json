@@ -39,10 +39,12 @@
     },
     "checksum_hex": {
       "type": "string",
-      "pattern": "^[0-9A-Fa-f]+$"
+      "description": "Optional producer-provided checksum metadata forwarded by the ground connector.",
+      "pattern": "^[0-9A-Fa-f]{8}$"
     },
     "metadata": {
       "type": "object",
+      "description": "Extra implementation-specific fields that do not change the contract.",
       "additionalProperties": true
     }
   }

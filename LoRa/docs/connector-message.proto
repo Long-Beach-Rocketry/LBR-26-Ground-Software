@@ -9,6 +9,8 @@ message ConnectorMessage {
   int64 timestamp_ms = 4;
   string source = 5;
   bytes payload = 6;
+  // Optional producer-provided checksum metadata. The ground connector forwards this field
+  // when present but does not own CRC generation or payload verification.
   optional string checksum_hex = 7;
   map<string, string> metadata = 8;
 }

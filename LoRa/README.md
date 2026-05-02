@@ -181,3 +181,4 @@ Short version:
 - Back/front fan-out: ZeroMQ when the build enables it.
 - Fallback transport: file-based replay for offline testing and debugging.
 - The transport layer is intentionally separate from the LoRa module abstraction so the other team can implement it without changing the pipeline contract.
+- Connector payload checksums, when present, are treated as optional passthrough metadata rather than a ground-side validation step.
