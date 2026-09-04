@@ -132,20 +132,21 @@ function(lbr_copy_gnu_runtime_dlls target_name)
     endif()
 endfunction()
 
-add_library(cli
-    src/cli/args.cc
-    src/cli/config.cc
-)
-target_include_directories(cli PUBLIC include)
-target_link_libraries(cli PUBLIC yaml-cpp::yaml-cpp)
-lbr_enable_coverage(cli)
-
 add_library(lora_periph
+    src/periph/lora_module_factory.cc
     src/periph/sx1262_module.cc
     src/periph/sx127_module.cc
 )
 target_include_directories(lora_periph PUBLIC include)
 lbr_enable_coverage(lora_periph)
+
+add_library(cli
+    src/cli/args.cc
+    src/cli/config.cc
+)
+target_include_directories(cli PUBLIC include)
+target_link_libraries(cli PUBLIC yaml-cpp::yaml-cpp PRIVATE lora_periph)
+lbr_enable_coverage(cli)
 
 add_library(connector
     src/connector/message.cc
@@ -217,6 +218,7 @@ if(BUILD_TESTING)
         tests/args_tests.cc
         tests/config_tests.cc
         tests/connector_tests.cc
+        tests/module_factory_tests.cc
         tests/pipeline_tests.cc
         tests/telemetry_interpreter_tests.cc
         tests/telemetry_serializer_tests.cc

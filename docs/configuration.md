@@ -42,7 +42,8 @@ lora:
 
 ### `lora`
 
-- `module` (`string`): `sx1262` or `sx127`
+- `module` (`string`): name of a module registered in `periph::LoRaModuleFactory`
+  (currently `sx1262` or `sx127`)
 - `mode` (`string`): `virtual` or `hardware`
 
 ## Defaults
@@ -64,7 +65,7 @@ If a key is missing, defaults are used:
 - `sdr.sample_rate_hz > 0`
 - `sdr.center_freq_hz > 0`
 - `pipeline.output_path` must not be empty
-- `lora.module` must be one of: `sx1262`, `sx127`
+- `lora.module` must be registered in `periph::LoRaModuleFactory`
 - `lora.mode` must be one of: `virtual`, `hardware`
 
 If validation fails, the app exits with an error.

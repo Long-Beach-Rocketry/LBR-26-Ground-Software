@@ -3,6 +3,7 @@ add_executable(lbr_tests
     args_tests.cc
     config_tests.cc
     connector_tests.cc
+    module_factory_tests.cc
     pipeline_tests.cc
     telemetry_interpreter_tests.cc
     telemetry_serializer_tests.cc

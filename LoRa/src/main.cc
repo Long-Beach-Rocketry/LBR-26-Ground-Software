@@ -17,8 +17,7 @@
 */
 
 #include "cli/config.h"
-#include "periph/sx1262_module.h"
-#include "periph/sx127_module.h"
+#include "periph/lora_module_factory.h"
 #include "sdr_pipeline.h"
 
 #include <exception>
@@ -33,11 +32,7 @@ namespace {
             "Hardware LoRa mode is not implemented yet; use lora.mode=virtual.");
         }
 
-        const std::string &module_name = settings.module;
-        if (module_name == "sx127")
-            return std::make_unique<periph::SX127Module>();
-
-        return std::make_unique<periph::SX1262Module>();
+        return periph::LoRaModuleFactory::create(settings.module);
     }
 }
 

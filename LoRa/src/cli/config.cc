@@ -7,8 +7,12 @@
 
 #include "cli/config.h"
 
+#include "periph/lora_module_factory.h"
+
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
@@ -30,8 +34,19 @@ namespace {
         }
     }
 
-    bool is_supported_lora_module(const std::string &module_name) {
-        return module_name == "sx1262" || module_name == "sx127";
+    bool is_supported_lora_module(std::string_view module_name) {
+        return periph::LoRaModuleFactory::is_supported(module_name);
+    }
+
+    std::string supported_lora_modules_text() {
+        const std::vector<std::string> modules = periph::LoRaModuleFactory::supported_modules();
+        std::ostringstream output;
+        for (std::size_t i = 0; i < modules.size(); ++i) {
+            if (i != 0)
+                output << ", ";
+            output << modules[i];
+        }
+        return output.str();
     }
 
     bool is_supported_lora_mode(const std::string &mode_name) {
@@ -125,7 +140,8 @@ void cli::Config::usage(std::string_view program_name) const {
               << "Options:\n"
               << "  -h, --help            Show this help message and exit\n"
               << "  -c, --config <file>   Path to configuration file\n"
-              << "  -m, --lora-module <name>  LoRa module (sx1262 or sx127)\n"
+              << "  -m, --lora-module <name>  LoRa module ("
+              << supported_lora_modules_text() << ")\n"
               << "  -b, --lora-mode <name> LoRa mode (virtual or hardware)\n"
               << "  -v, --verbose         Enable verbose output" << std::endl;
 }
@@ -241,7 +257,7 @@ bool cli::Config::parse_config_file(std::string &error_message) {
             return false;
         }
         if (!is_supported_lora_module(_settings.lora.module)) {
-            error_message = "lora.module must be one of: sx1262, sx127.";
+            error_message = "lora.module must be one of: " + supported_lora_modules_text() + ".";
             return false;
         }
         if (!is_supported_lora_mode(_settings.lora.mode)) {

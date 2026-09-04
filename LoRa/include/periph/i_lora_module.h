@@ -40,9 +40,10 @@ namespace periph {
     };
 
     /**
-     * @brief Interface implemented by all LoRa radio modules.
+     * @brief Strategy interface implemented by all LoRa radio modules.
      *
-     * SDRPipeline depends on this abstraction to stay hardware-agnostic.
+     * SDRPipeline depends on this abstraction to stay hardware-agnostic while
+     * LoRaModuleFactory selects the concrete strategy at runtime.
      */
     class ILoRaModule {
         public:

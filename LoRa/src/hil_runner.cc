@@ -4,8 +4,7 @@
  */
 
 #include "periph/i_lora_module.h"
-#include "periph/sx1262_module.h"
-#include "periph/sx127_module.h"
+#include "periph/lora_module_factory.h"
 
 #include <chrono>
 #include <cstdint>
@@ -14,14 +13,8 @@
 #include <string>
 
 namespace {
-    std::unique_ptr<periph::ILoRaModule> create_lora_module(const std::string &module_name) {
-        if (module_name == "sx127")
-            return std::make_unique<periph::SX127Module>();
-        return std::make_unique<periph::SX1262Module>();
-    }
-
     void usage(const char *program) {
-        std::cout << "Usage: " << program << " [--module sx1262|sx127] [--timeout-ms N] [--min-bytes N]\n";
+        std::cout << "Usage: " << program << " [--module <name>] [--timeout-ms N] [--min-bytes N]\n";
     }
 }
 
@@ -54,12 +47,13 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    if (module_name != "sx1262" && module_name != "sx127") {
+    if (!periph::LoRaModuleFactory::is_supported(module_name)) {
         std::cerr << "Unsupported module: " << module_name << '\n';
         return 2;
     }
 
-    std::unique_ptr<periph::ILoRaModule> module = create_lora_module(module_name);
+    std::unique_ptr<periph::ILoRaModule> module =
+        periph::LoRaModuleFactory::create(module_name);
     const periph::LoRaStatusCode init_status = module->init();
     if (init_status != periph::LoRaStatusCode::Ok) {
         std::cerr << "HIL init failed for module=" << module_name << '\n';

@@ -8,8 +8,12 @@
   - parses CLI flags and YAML.
   - validates runtime settings.
 - `periph::ILoRaModule` and modules (`LoRa/include/periph/*.h`, `LoRa/src/periph/*.cc`)
-  - abstraction used by pipeline.
+  - strategy abstraction used by the pipeline.
   - selectable module implementations: `sx1262`, `sx127`.
+- `periph::LoRaModuleFactory` (`LoRa/include/periph/lora_module_factory.h`)
+  - factory catalogue mapping configuration names to module creators.
+  - centralizes module creation and supported-name validation for the CLI, ground
+    executable and HIL runner.
 - `SDRPipeline` (`LoRa/include/sdr_pipeline.h`, `LoRa/src/sdr_pipeline.cc`)
   - orchestrates the runtime data path from module to output.
 - connector transports (`LoRa/include/connector/*.h`, `LoRa/src/connector/*.cc`)
@@ -33,8 +37,20 @@
   - `-b/--lora-mode <virtual|hardware>`
    - `-v/--verbose`
 3. YAML config is parsed and validated when provided.
-4. LoRa module implementation is selected from runtime settings.
+4. `periph::LoRaModuleFactory` creates the module implementation selected from runtime settings.
 5. `SDRPipeline` is constructed and executed.
+
+## Adding a LoRa module
+
+To add another board/radio implementation:
+
+1. Implement `periph::ILoRaModule` in `LoRa/include/periph` and `LoRa/src/periph`.
+2. Add one creator entry to the catalogue in `lora_module_factory.cc`.
+3. Add the source file to the `lora_periph` target in `LoRa/CMakeLists.txt`.
+
+The CLI validation, module construction, HIL runner and connector source identifier
+then use the new name automatically. The pipeline remains independent of the concrete
+module class.
 
 ## Current Status
 

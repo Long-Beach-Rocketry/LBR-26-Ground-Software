@@ -5,6 +5,7 @@ Ground software skeleton for the Long Beach Rocketry station, organized under th
 ## What This Update Adds
 
 - A hardware abstraction interface: `periph::ILoRaModule`
+- A factory catalogue: `periph::LoRaModuleFactory`
 - Two interchangeable radio module implementations:
   - `periph::SX1262Module`
   - `periph::SX127Module`
@@ -21,6 +22,10 @@ The pipeline now consumes telemetry through `ILoRaModule`:
 
 Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
 
+`LoRaModuleFactory` centralizes the mapping between configuration names and concrete
+module implementations. It is used by the CLI validation, the ground executable and
+the HIL runner, so adding a module does not require duplicating selection logic.
+
 ## Folder Layout
 
 ```text
@@ -30,6 +35,7 @@ LoRa/
       config.h
     periph/
       i_lora_module.h
+      lora_module_factory.h
       sx1262_module.h
       sx127_module.h
     sdr_pipeline.h
@@ -37,6 +43,7 @@ LoRa/
     cli/
       config.cc
     periph/
+      lora_module_factory.cc
       sx1262_module.cc
       sx127_module.cc
     connector/
@@ -51,7 +58,7 @@ LoRa/
 
 ## Module Selection
 
-Choose LoRa module and mode with either:
+Choose a registered LoRa module and mode with either:
 
 - CLI: `--lora-module sx1262` or `--lora-module sx127`
 - CLI: `--lora-mode virtual` or `--lora-mode hardware`
@@ -66,6 +73,10 @@ lora:
 The CLI options override defaults and are validated.
 
 `virtual` is the default mode and is the one that runs in CI. `hardware` is reserved for the future real radio drivers and currently fails fast with a clear message.
+
+To add another module, implement `ILoRaModule`, register its name and creator in
+`src/periph/lora_module_factory.cc`, and add its source to `lora_periph` in
+`CMakeLists.txt`. The rest of the runtime discovers the name from the factory catalogue.
 
 ## Build And Run
 

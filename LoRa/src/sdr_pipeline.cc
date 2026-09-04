@@ -7,7 +7,6 @@
 
 #include "sdr_pipeline.h"
 
-#include "connector/message.h"
 #include "telemetry/decoded_telemetry_publisher.h"
 #include "telemetry/decoded_telemetry_serializer.h"
 #include "telemetry/interpreter.h"
@@ -59,13 +58,6 @@ namespace {
         out.write(reinterpret_cast<const char *>(payload), static_cast<std::streamsize>(payload_len));
         if (!out)
             throw std::runtime_error("Failed to write telemetry output file: " + output_path);
-    }
-
-    connector::Source source_from_module_name(const std::string &module_name) {
-        if (module_name == "sx127")
-            return connector::Source::Sx127;
-
-        return connector::Source::Sx1262;
     }
 }
 
@@ -134,9 +126,7 @@ void SDRPipeline::run() {
         decoded_struct.decode_source = decode_source;
         decoded_struct.summary = summary;
         
-        publisher.publish(decoded_struct,
-                          connector::source_to_string(source_from_module_name(_settings.lora.module)),
-                          _telemetry_sequence++);
+        publisher.publish(decoded_struct, _settings.lora.module, _telemetry_sequence++);
         std::cout << "  telemetry_zmq_publish: ok\n";
     } catch (const std::exception &e) {
         std::cout << "  telemetry_zmq_publish: unavailable (" << e.what() << ")\n";

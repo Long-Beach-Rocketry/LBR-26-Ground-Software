@@ -1,17 +1,18 @@
-add_library(cli
-    cli/args.cc
-    cli/config.cc
-)
-target_include_directories(cli PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(cli PUBLIC yaml-cpp::yaml-cpp)
-lbr_enable_coverage(cli)
-
 add_library(lora_periph
+    periph/lora_module_factory.cc
     periph/sx1262_module.cc
     periph/sx127_module.cc
 )
 target_include_directories(lora_periph PUBLIC ${PROJECT_SOURCE_DIR}/include)
 lbr_enable_coverage(lora_periph)
+
+add_library(cli
+    cli/args.cc
+    cli/config.cc
+)
+target_include_directories(cli PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(cli PUBLIC yaml-cpp::yaml-cpp PRIVATE lora_periph)
+lbr_enable_coverage(cli)
 
 add_library(connector
     connector/message.cc
