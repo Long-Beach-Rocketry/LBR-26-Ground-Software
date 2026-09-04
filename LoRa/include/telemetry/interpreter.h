@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -24,15 +24,13 @@ namespace Telemetry {
         public:
             /**
              * @brief Attempts to decode a Telemetry payload into a proto-backed message and summary.
-             * @param payload Pointer to payload bytes.
-             * @param payload_len Number of payload bytes.
+             * @param payload Non-owning view of payload bytes.
              * @param message Output TelemetryMessage feed decoded from the payload.
              * @param summary Output human-readable summary built from TELEMETRY_PROTO_FIELDS.
              * @param decode_source Output decode source identifier.
              * @return True when a payload was decoded successfully via protobuf.
              */
-            static bool decode(const uint8_t *payload,
-                               size_t payload_len,
+            static bool decode(std::span<const std::uint8_t> payload,
                                TelemetryMessage &message,
                                std::string &summary,
                                std::string &decode_source);

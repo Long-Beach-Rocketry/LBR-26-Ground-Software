@@ -8,7 +8,10 @@
 #ifndef LORA_INCLUDE_CONNECTOR_LOCAL_TCP_TRANSPORT_H_
 #define LORA_INCLUDE_CONNECTOR_LOCAL_TCP_TRANSPORT_H_
 
+#include "connector/socket_handle.h"
+
 #include <cstdint>
+#include <span>
 #include <string>
 
 namespace connector {
@@ -32,6 +35,11 @@ namespace connector {
              * @param port TCP port number.
              */
             LocalTcpTransport(LocalTcpMode mode, std::string host, std::uint16_t port);
+
+            LocalTcpTransport(const LocalTcpTransport &) = delete;
+            LocalTcpTransport &operator=(const LocalTcpTransport &) = delete;
+            LocalTcpTransport(LocalTcpTransport &&) = delete;
+            LocalTcpTransport &operator=(LocalTcpTransport &&) = delete;
 
             /**
              * @brief Releases socket resources when the object goes out of scope.
@@ -79,11 +87,10 @@ namespace connector {
 
             /**
              * @brief Receives a chunk of bytes from the connected socket.
-             * @param buffer Destination buffer.
-             * @param buffer_size Number of bytes available in the destination buffer.
+             * @param buffer Non-owning view of the destination buffer.
              * @return Number of bytes received, zero on orderly shutdown, or negative on error.
              */
-            int recv_some(char *buffer, int buffer_size);
+            int recv_some(std::span<char> buffer);
 
             LocalTcpMode _mode;
             std::string _host;
@@ -91,15 +98,8 @@ namespace connector {
             bool _is_open = false;
             std::string _input_buffer;
 
-#ifdef _WIN32
-            using SocketHandle = std::intptr_t;
-            SocketHandle _listen_socket = -1;
-            SocketHandle _socket = -1;
-#else
-            using SocketHandle = int;
-            SocketHandle _listen_socket = -1;
-            SocketHandle _socket = -1;
-#endif
+            SocketHandle _listen_socket;
+            SocketHandle _socket;
     };
 }
 

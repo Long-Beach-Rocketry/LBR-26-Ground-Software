@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <span>
 #include <string>
 
 namespace {
@@ -64,7 +65,7 @@ int main(int argc, char **argv) {
     const auto start = std::chrono::steady_clock::now();
 
     while (true) {
-        const periph::LoRaReceiveResult rx = module->receive(buffer, sizeof(buffer), 100);
+        const periph::LoRaReceiveResult rx = module->receive(std::span<std::uint8_t>(buffer), 100);
         if (rx.status == periph::LoRaStatusCode::Ok && rx.bytes_received >= min_bytes) {
             std::cout << "HIL PASS module=" << module_name
                       << " bytes_received=" << rx.bytes_received

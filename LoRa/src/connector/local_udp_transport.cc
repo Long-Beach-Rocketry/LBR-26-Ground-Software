@@ -28,13 +28,7 @@
 
 namespace {
 #ifdef _WIN32
-    using NativeSocket = SOCKET;
-    constexpr NativeSocket invalid_socket_value = INVALID_SOCKET;
-
-    void close_socket(NativeSocket socket_handle) {
-        if (socket_handle != invalid_socket_value)
-            ::closesocket(socket_handle);
-    }
+    using NativeSocket = connector::NativeSocket;
 
     void ensure_winsock_started() {
         static bool initialized = false;
@@ -48,13 +42,7 @@ namespace {
         initialized = true;
     }
 #else
-    using NativeSocket = int;
-    constexpr NativeSocket invalid_socket_value = -1;
-
-    void close_socket(NativeSocket socket_handle) {
-        if (socket_handle != invalid_socket_value)
-            ::close(socket_handle);
-    }
+    using NativeSocket = connector::NativeSocket;
 #endif
 
     sockaddr_in make_address(const std::string &host, std::uint16_t port) {
@@ -91,28 +79,28 @@ void connector::LocalUdpTransport::open() {
     ensure_winsock_started();
 #endif
 
-    _socket = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (_socket == invalid_socket_value)
-        throw std::runtime_error("Failed to create UDP socket.");
-
     const sockaddr_in address = make_address(_host, _port);
+
+    _socket.reset(::socket(AF_INET, SOCK_DGRAM, 0));
+    if (!_socket.valid())
+        throw std::runtime_error("Failed to create UDP socket.");
 
     if (_mode == LocalUdpMode::Server) {
         int reuse_enabled = 1;
-        ::setsockopt(_socket,
+        ::setsockopt(_socket.get(),
                      SOL_SOCKET,
                      SO_REUSEADDR,
                      reinterpret_cast<const char *>(&reuse_enabled),
                      static_cast<int>(sizeof(reuse_enabled)));
 
-        if (::bind(_socket,
+        if (::bind(_socket.get(),
                    reinterpret_cast<const sockaddr *>(&address),
                    static_cast<int>(sizeof(address))) != 0) {
             close();
             throw std::runtime_error("Failed to bind local UDP transport.");
         }
     } else {
-        if (::connect(_socket,
+        if (::connect(_socket.get(),
                       reinterpret_cast<const sockaddr *>(&address),
                       static_cast<int>(sizeof(address))) != 0) {
             close();
@@ -127,10 +115,7 @@ void connector::LocalUdpTransport::open() {
 }
 
 void connector::LocalUdpTransport::close() noexcept {
-    if (_socket != invalid_socket_value) {
-        close_socket(_socket);
-        _socket = invalid_socket_value;
-    }
+    _socket.reset();
     _is_open = false;
     _has_peer = false;
     _peer_ip.clear();
@@ -138,7 +123,7 @@ void connector::LocalUdpTransport::close() noexcept {
 }
 
 void connector::LocalUdpTransport::ensure_open() const {
-    if (!_is_open || _socket == invalid_socket_value)
+    if (!_is_open || !_socket.valid())
         throw std::runtime_error("Local UDP transport is not open.");
 }
 
@@ -146,7 +131,7 @@ void connector::LocalUdpTransport::write_datagram(const std::string &payload) {
     ensure_open();
 
     if (_mode == LocalUdpMode::Client) {
-        const int sent = static_cast<int>(::send(_socket, payload.data(), payload.size(), 0));
+        const int sent = static_cast<int>(::send(_socket.get(), payload.data(), payload.size(), 0));
         if (sent < 0 || static_cast<std::size_t>(sent) != payload.size())
             throw std::runtime_error("Failed to send UDP datagram.");
         return;
@@ -156,7 +141,7 @@ void connector::LocalUdpTransport::write_datagram(const std::string &payload) {
         throw std::runtime_error("Cannot send UDP datagram before a client peer is known.");
 
     const sockaddr_in peer = make_address(_peer_ip, _peer_port);
-    const int sent = static_cast<int>(::sendto(_socket,
+    const int sent = static_cast<int>(::sendto(_socket.get(),
                                                payload.data(),
                                                payload.size(),
                                                0,
@@ -171,7 +156,7 @@ bool connector::LocalUdpTransport::read_datagram(std::string &payload, std::uint
 
     fd_set read_set;
     FD_ZERO(&read_set);
-    FD_SET(_socket, &read_set);
+    FD_SET(_socket.get(), &read_set);
 
     timeval timeout {};
     timeout.tv_sec = static_cast<long>(timeout_ms / 1000U);
@@ -180,7 +165,7 @@ bool connector::LocalUdpTransport::read_datagram(std::string &payload, std::uint
 #ifdef _WIN32
     const int select_result = ::select(0, &read_set, nullptr, nullptr, &timeout);
 #else
-    const int select_result = ::select(_socket + 1, &read_set, nullptr, nullptr, &timeout);
+    const int select_result = ::select(_socket.get() + 1, &read_set, nullptr, nullptr, &timeout);
 #endif
     if (select_result < 0)
         throw std::runtime_error("Failed waiting on UDP socket.");
@@ -195,7 +180,7 @@ bool connector::LocalUdpTransport::read_datagram(std::string &payload, std::uint
     socklen_t peer_len = static_cast<socklen_t>(sizeof(peer_address));
 #endif
 
-    const int received = static_cast<int>(::recvfrom(_socket,
+    const int received = static_cast<int>(::recvfrom(_socket.get(),
                                                      buffer.data(),
                                                      static_cast<int>(buffer.size()),
                                                      0,

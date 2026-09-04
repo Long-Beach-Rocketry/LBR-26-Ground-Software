@@ -8,6 +8,8 @@
 #ifndef LORA_INCLUDE_CONNECTOR_LOCAL_UDP_TRANSPORT_H_
 #define LORA_INCLUDE_CONNECTOR_LOCAL_UDP_TRANSPORT_H_
 
+#include "connector/socket_handle.h"
+
 #include <cstdint>
 #include <string>
 
@@ -34,6 +36,11 @@ namespace connector {
              * @param port UDP port number.
              */
             LocalUdpTransport(LocalUdpMode mode, std::string host, std::uint16_t port);
+
+            LocalUdpTransport(const LocalUdpTransport &) = delete;
+            LocalUdpTransport &operator=(const LocalUdpTransport &) = delete;
+            LocalUdpTransport(LocalUdpTransport &&) = delete;
+            LocalUdpTransport &operator=(LocalUdpTransport &&) = delete;
 
             /**
              * @brief Releases socket resources when the object goes out of scope.
@@ -76,17 +83,9 @@ namespace connector {
             bool _is_open = false;
             bool _has_peer = false;
 
-#ifdef _WIN32
-            using SocketHandle = std::intptr_t;
-            SocketHandle _socket = -1;
+            SocketHandle _socket;
             std::string _peer_ip;
             std::uint16_t _peer_port = 0;
-#else
-            using SocketHandle = int;
-            SocketHandle _socket = -1;
-            std::string _peer_ip;
-            std::uint16_t _peer_port = 0;
-#endif
     };
 }
 

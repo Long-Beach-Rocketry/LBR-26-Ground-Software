@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <span>
 #include <stdexcept>
 #include <string_view>
 
@@ -41,9 +42,8 @@ namespace {
     }
 
     void persist_payload(const std::string &output_path,
-                         const std::uint8_t *payload,
-                         std::size_t payload_len) {
-        if (payload_len == 0)
+                         std::span<const std::uint8_t> payload) {
+        if (payload.empty())
             return;
 
         std::filesystem::path path(output_path);
@@ -55,7 +55,8 @@ namespace {
         if (!out)
             throw std::runtime_error("Failed to open telemetry output file: " + output_path);
 
-        out.write(reinterpret_cast<const char *>(payload), static_cast<std::streamsize>(payload_len));
+        out.write(reinterpret_cast<const char *>(payload.data()),
+                  static_cast<std::streamsize>(payload.size()));
         if (!out)
             throw std::runtime_error("Failed to write telemetry output file: " + output_path);
     }
@@ -75,7 +76,7 @@ void SDRPipeline::run() {
 
     std::array<uint8_t, 256> telemetry_buffer {};
     const periph::LoRaReceiveResult receive_result =
-        _lora_module.receive(telemetry_buffer.data(), telemetry_buffer.size(), 50);
+        _lora_module.receive(std::span<std::uint8_t>(telemetry_buffer), 50);
     if (receive_result.status != periph::LoRaStatusCode::Ok &&
         receive_result.status != periph::LoRaStatusCode::Timeout)
         throw std::runtime_error(std::string("Failed to receive telemetry: ") +
@@ -91,9 +92,9 @@ void SDRPipeline::run() {
               << "  telemetry_status: " << status_to_string(receive_result.status) << '\n'
               << "  telemetry_bytes_received: " << receive_result.bytes_received << '\n';
 
-    persist_payload(_settings.pipeline.output_path,
-                    telemetry_buffer.data(),
-                    receive_result.bytes_received);
+    const std::span<const std::uint8_t> received_payload(telemetry_buffer.data(),
+                                                          receive_result.bytes_received);
+    persist_payload(_settings.pipeline.output_path, received_payload);
 
     if (!_settings.pipeline.interpret_telemetry)
         return;
@@ -101,8 +102,7 @@ void SDRPipeline::run() {
     TelemetryMessage message = TelemetryMessage_init_zero;
     std::string summary;
     std::string decode_source;
-    const bool decoded = Telemetry::TelemetryInterpreter::decode(telemetry_buffer.data(),
-                                                                 receive_result.bytes_received,
+    const bool decoded = Telemetry::TelemetryInterpreter::decode(received_payload,
                                                                  message,
                                                                  summary,
                                                                  decode_source);

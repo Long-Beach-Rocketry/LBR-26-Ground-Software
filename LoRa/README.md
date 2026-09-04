@@ -17,8 +17,12 @@ Ground software skeleton for the Long Beach Rocketry station, organized under th
 The pipeline now consumes telemetry through `ILoRaModule`:
 
 - `init() -> LoRaStatusCode`
-- `transmit(const uint8_t* buf, size_t len) -> LoRaTransmitResult`
-- `receive(uint8_t* buf, size_t max_len, uint32_t timeout_ms) -> LoRaReceiveResult`
+- `transmit(std::span<const uint8_t> payload) -> LoRaTransmitResult`
+- `receive(std::span<uint8_t> buffer, uint32_t timeout_ms) -> LoRaReceiveResult`
+
+The spans are non-owning views: callers retain ownership of the memory and the
+interface carries its size together with the pointer, preventing mismatched
+pointer/length pairs.
 
 Because `SDRPipeline` only sees this interface, switching from SX126x to SX127x does not require pipeline logic changes. The only change is module selection in config/CLI.
 
