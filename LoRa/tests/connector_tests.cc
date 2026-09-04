@@ -19,8 +19,14 @@
 #include <fstream>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 namespace {
+    static_assert(!std::is_copy_constructible_v<connector::LocalTcpTransport>);
+    static_assert(!std::is_copy_assignable_v<connector::LocalTcpTransport>);
+    static_assert(!std::is_copy_constructible_v<connector::LocalUdpTransport>);
+    static_assert(!std::is_copy_assignable_v<connector::LocalUdpTransport>);
+
     std::filesystem::path temp_file_path(const std::string &name) {
         return std::filesystem::temp_directory_path() / name;
     }
@@ -577,6 +583,11 @@ TEST(ConnectorTests, LocalUdpTransportReadBeforeOpenThrows) {
     connector::LocalUdpTransport transport(connector::LocalUdpMode::Client, "127.0.0.1", 45693);
     std::string payload;
     EXPECT_THROW(static_cast<void>(transport.read_datagram(payload, 5)), std::runtime_error);
+}
+
+TEST(ConnectorTests, LocalUdpTransportRejectsInvalidHost) {
+    connector::LocalUdpTransport transport(connector::LocalUdpMode::Client, "not-an-ip", 45695);
+    EXPECT_THROW(static_cast<void>(transport.open()), std::runtime_error);
 }
 
 TEST(ConnectorTests, LocalUdpTransportServerCannotSendBeforeLearningPeer) {

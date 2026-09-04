@@ -31,14 +31,7 @@
 
 namespace {
 #ifdef _WIN32
-    using NativeSocket = SOCKET;
-    constexpr NativeSocket invalid_socket_value = INVALID_SOCKET;
-
-    // Close helper used by both normal and error paths.
-    void close_socket(NativeSocket socket_handle) {
-        if (socket_handle != invalid_socket_value)
-            ::closesocket(socket_handle);
-    }
+    using NativeSocket = connector::NativeSocket;
 
     bool set_nonblocking(NativeSocket socket_handle, bool nonblocking) {
         u_long mode = nonblocking ? 1UL : 0UL;
@@ -100,14 +93,7 @@ namespace {
         initialized = true;
     }
 #else
-    using NativeSocket = int;
-    constexpr NativeSocket invalid_socket_value = -1;
-
-    // POSIX close helper used by both normal and error paths.
-    void close_socket(NativeSocket socket_handle) {
-        if (socket_handle != invalid_socket_value)
-            ::close(socket_handle);
-    }
+    using NativeSocket = connector::NativeSocket;
 
     bool set_nonblocking(NativeSocket socket_handle, bool nonblocking) {
         const int flags = ::fcntl(socket_handle, F_GETFL, 0);
@@ -199,48 +185,47 @@ void connector::LocalTcpTransport::open() {
     const sockaddr_in address = make_address(_host, _port);
 
     if (_mode == LocalTcpMode::Server) {
-        _listen_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (_listen_socket == invalid_socket_value)
+        _listen_socket.reset(::socket(AF_INET, SOCK_STREAM, 0));
+        if (!_listen_socket.valid())
             throw std::runtime_error("Failed to create listen socket.");
 
         int reuse_enabled = 1;
-        ::setsockopt(_listen_socket,
+        ::setsockopt(_listen_socket.get(),
                      SOL_SOCKET,
                      SO_REUSEADDR,
                      reinterpret_cast<const char *>(&reuse_enabled),
                      static_cast<int>(sizeof(reuse_enabled)));
 
-        if (::bind(_listen_socket,
+        if (::bind(_listen_socket.get(),
                    reinterpret_cast<const sockaddr *>(&address),
                    static_cast<int>(sizeof(address))) != 0) {
             close();
             throw std::runtime_error("Failed to bind local TCP transport.");
         }
 
-        if (::listen(_listen_socket, 1) != 0) {
+        if (::listen(_listen_socket.get(), 1) != 0) {
             close();
             throw std::runtime_error("Failed to listen on local TCP transport.");
         }
 
-        _socket = ::accept(_listen_socket, nullptr, nullptr);
-        close_socket(_listen_socket);
-        _listen_socket = invalid_socket_value;
-        if (_socket == invalid_socket_value) {
+        _socket.reset(::accept(_listen_socket.get(), nullptr, nullptr));
+        _listen_socket.reset();
+        if (!_socket.valid()) {
             close();
             throw std::runtime_error("Failed to accept local TCP client.");
         }
     } else {
-        _socket = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (_socket == invalid_socket_value)
+        _socket.reset(::socket(AF_INET, SOCK_STREAM, 0));
+        if (!_socket.valid())
             throw std::runtime_error("Failed to create client socket.");
 
-        if (!set_nonblocking(_socket, true)) {
+        if (!set_nonblocking(_socket.get(), true)) {
             close();
             throw std::runtime_error("Failed to configure non-blocking client socket.");
         }
 
         for (int attempt = 0; attempt < 20; ++attempt) {
-            if (connect_with_timeout(_socket, address, 150)) {
+            if (connect_with_timeout(_socket.get(), address, 150)) {
                 break;
             }
             if (attempt == 19) {
@@ -250,7 +235,7 @@ void connector::LocalTcpTransport::open() {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
 
-        if (!set_nonblocking(_socket, false)) {
+        if (!set_nonblocking(_socket.get(), false)) {
             close();
             throw std::runtime_error("Failed to restore blocking mode on client socket.");
         }
@@ -261,21 +246,15 @@ void connector::LocalTcpTransport::open() {
 
 // Close all sockets and reset buffered state; safe to call repeatedly.
 void connector::LocalTcpTransport::close() noexcept {
-    if (_listen_socket != invalid_socket_value) {
-        close_socket(_listen_socket);
-        _listen_socket = invalid_socket_value;
-    }
-    if (_socket != invalid_socket_value) {
-        close_socket(_socket);
-        _socket = invalid_socket_value;
-    }
+    _listen_socket.reset();
+    _socket.reset();
     _is_open = false;
     _input_buffer.clear();
 }
 
 // Guard all I/O operations behind an active connected socket.
 void connector::LocalTcpTransport::ensure_open() const {
-    if (!_is_open || _socket == invalid_socket_value)
+    if (!_is_open || !_socket.valid())
         throw std::runtime_error("Local TCP transport is not open.");
 }
 
@@ -286,12 +265,12 @@ void connector::LocalTcpTransport::send_all(const std::string &data) {
     std::size_t total_sent = 0;
     while (total_sent < data.size()) {
 #ifdef _WIN32
-        const int sent = ::send(_socket,
+        const int sent = ::send(_socket.get(),
                                 data.data() + total_sent,
                                 static_cast<int>(data.size() - total_sent),
                                 0);
 #else
-        const int sent = static_cast<int>(::send(_socket,
+        const int sent = static_cast<int>(::send(_socket.get(),
                                                  data.data() + total_sent,
                                                  data.size() - total_sent,
                                                  0));
@@ -311,12 +290,12 @@ void connector::LocalTcpTransport::write_line(const std::string &line) {
 }
 
 // Thin wrapper over recv to isolate platform-specific signatures.
-int connector::LocalTcpTransport::recv_some(char *buffer, int buffer_size) {
+int connector::LocalTcpTransport::recv_some(std::span<char> buffer) {
     ensure_open();
 #ifdef _WIN32
-    return static_cast<int>(::recv(_socket, buffer, buffer_size, 0));
+    return static_cast<int>(::recv(_socket.get(), buffer.data(), static_cast<int>(buffer.size()), 0));
 #else
-    return static_cast<int>(::recv(_socket, buffer, buffer_size, 0));
+    return static_cast<int>(::recv(_socket.get(), buffer.data(), buffer.size(), 0));
 #endif
 }
 
@@ -333,7 +312,7 @@ bool connector::LocalTcpTransport::read_line(std::string &line) {
         }
 
         char buffer[1024] {};
-        const int received = recv_some(buffer, static_cast<int>(sizeof(buffer)));
+        const int received = recv_some(std::span<char>(buffer));
         if (received <= 0) {
             if (_input_buffer.empty())
                 return false;

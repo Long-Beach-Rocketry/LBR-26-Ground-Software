@@ -21,24 +21,23 @@ namespace {
     constexpr std::size_t kMaxTelemetryPayloadBytes = 256U;
 }
 
-bool Telemetry::TelemetryInterpreter::decode(const uint8_t *payload,
-                                            size_t payload_len,
+bool Telemetry::TelemetryInterpreter::decode(std::span<const std::uint8_t> payload,
                                             TelemetryMessage &message,
                                             std::string &summary,
                                             std::string &decode_source) {
-    if (payload == nullptr || payload_len == 0) {
+    if (payload.empty()) {
         decode_source = "error";
-        summary = "null or empty payload";
+        summary = "empty payload";
         return false;
     }
 
-    if (payload_len > kMaxTelemetryPayloadBytes) {
+    if (payload.size() > kMaxTelemetryPayloadBytes) {
         decode_source = "error";
         summary = "payload exceeds max size";
         return false;
     }
 
-    pb_istream_t stream = pb_istream_from_buffer(payload, payload_len);
+    pb_istream_t stream = pb_istream_from_buffer(payload.data(), payload.size());
     if (pb_decode(&stream, TelemetryMessage_fields, &message)) {
         decode_source = "pb_decode";
         summary = summarize_telemetry_message(message, decode_source);

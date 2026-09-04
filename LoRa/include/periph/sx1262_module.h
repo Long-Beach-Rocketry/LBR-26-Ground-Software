@@ -20,8 +20,9 @@ namespace periph {
     class SX1262Module final : public ILoRaModule {
         public:
             LoRaStatusCode init() override;
-            LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override;
-            LoRaReceiveResult receive(uint8_t *buf, size_t max_len, uint32_t timeout_ms) override;
+            LoRaTransmitResult transmit(std::span<const std::uint8_t> payload) override;
+            LoRaReceiveResult receive(std::span<std::uint8_t> buffer,
+                                      std::uint32_t timeout_ms) override;
 
         private:
             bool _initialized = false;

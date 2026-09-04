@@ -23,6 +23,32 @@ namespace connector {
     };
 }
 
+#if defined(LBR_HAS_ZEROMQ) && LBR_HAS_ZEROMQ
+namespace {
+    class ZmqMessageGuard final {
+        public:
+            ZmqMessageGuard() {
+                if (::zmq_msg_init(&_message) != 0)
+                    throw std::runtime_error("Failed to initialize ZeroMQ message.");
+            }
+
+            ~ZmqMessageGuard() {
+                ::zmq_msg_close(&_message);
+            }
+
+            ZmqMessageGuard(const ZmqMessageGuard &) = delete;
+            ZmqMessageGuard &operator=(const ZmqMessageGuard &) = delete;
+
+            zmq_msg_t *get() noexcept {
+                return &_message;
+            }
+
+        private:
+            zmq_msg_t _message {};
+    };
+}
+#endif
+
 connector::LocalZmqTransport::LocalZmqTransport(LocalZmqMode mode,
                                                 std::string endpoint,
                                                 std::string topic)
@@ -131,31 +157,20 @@ bool connector::LocalZmqTransport::receive_message(std::string &payload, std::in
     if (::zmq_setsockopt(_impl->socket, ZMQ_RCVTIMEO, &timeout_ms, sizeof(timeout_ms)) != 0)
         throw std::runtime_error("Failed to configure ZeroMQ receive timeout.");
 
-    zmq_msg_t topic_frame;
-    if (::zmq_msg_init(&topic_frame) != 0)
-        throw std::runtime_error("Failed to initialize ZeroMQ topic frame.");
+    ZmqMessageGuard topic_frame;
 
-    const int topic_result = ::zmq_msg_recv(&topic_frame, _impl->socket, 0);
-    if (topic_result < 0) {
-        ::zmq_msg_close(&topic_frame);
+    const int topic_result = ::zmq_msg_recv(topic_frame.get(), _impl->socket, 0);
+    if (topic_result < 0)
         return false;
-    }
 
-    ::zmq_msg_close(&topic_frame);
+    ZmqMessageGuard payload_frame;
 
-    zmq_msg_t payload_frame;
-    if (::zmq_msg_init(&payload_frame) != 0)
-        throw std::runtime_error("Failed to initialize ZeroMQ payload frame.");
-
-    const int payload_result = ::zmq_msg_recv(&payload_frame, _impl->socket, 0);
-    if (payload_result < 0) {
-        ::zmq_msg_close(&payload_frame);
+    const int payload_result = ::zmq_msg_recv(payload_frame.get(), _impl->socket, 0);
+    if (payload_result < 0)
         return false;
-    }
 
-    payload.assign(static_cast<const char *>(::zmq_msg_data(&payload_frame)),
-                   static_cast<std::size_t>(::zmq_msg_size(&payload_frame)));
-    ::zmq_msg_close(&payload_frame);
+    payload.assign(static_cast<const char *>(::zmq_msg_data(payload_frame.get())),
+                   static_cast<std::size_t>(::zmq_msg_size(payload_frame.get())));
     return true;
 #else
     (void)payload;

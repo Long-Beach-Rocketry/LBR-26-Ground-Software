@@ -12,6 +12,7 @@
 #include "telemetry/test_payloads.h"
 
 #include <string>
+#include <span>
 #include <vector>
 
 using namespace Telemetry;
@@ -20,15 +21,15 @@ using namespace Telemetry;
 // Null/Empty Payload Tests
 // =============================================================================
 
-TEST(TelemetryInterpreterTests, DecodeReturnsErrorForNullPayload) {
+TEST(TelemetryInterpreterTests, DecodeReturnsErrorForEmptyView) {
     TelemetryMessage message = TelemetryMessage_init_zero;
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(nullptr, 16, message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode({}, message, summary, decode_source);
     EXPECT_FALSE(result);
     EXPECT_EQ(decode_source, "error");
-    EXPECT_NE(summary.find("null"), std::string::npos);
+    EXPECT_NE(summary.find("empty"), std::string::npos);
 }
 
 TEST(TelemetryInterpreterTests, DecodeReturnsErrorForEmptyPayload) {
@@ -37,7 +38,8 @@ TEST(TelemetryInterpreterTests, DecodeReturnsErrorForEmptyPayload) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_FALSE(result);
     EXPECT_EQ(decode_source, "error");
 }
@@ -48,7 +50,8 @@ TEST(TelemetryInterpreterTests, DecodeReturnsErrorForPayloadTooLarge) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(oversized.data(), oversized.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(oversized),
+                                               message, summary, decode_source);
     EXPECT_FALSE(result);
     EXPECT_EQ(decode_source, "error");
 }
@@ -63,7 +66,8 @@ TEST(TelemetryInterpreterTests, DecodeSucceedsWithValidPayload) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_TRUE(result);
     EXPECT_EQ(decode_source, "pb_decode");
     EXPECT_EQ(message.field_1, 2U);
@@ -78,7 +82,8 @@ TEST(TelemetryInterpreterTests, DecodeAllZerosSuccessfully) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_TRUE(result);
     EXPECT_EQ(decode_source, "pb_decode");
     EXPECT_EQ(message.field_1, 0U);
@@ -93,7 +98,8 @@ TEST(TelemetryInterpreterTests, DecodeAllMaxSuccessfully) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_TRUE(result);
     EXPECT_EQ(decode_source, "pb_decode");
     EXPECT_EQ(message.field_1, 0xFFFFFFFFU);
@@ -108,7 +114,8 @@ TEST(TelemetryInterpreterTests, DecodeArbitraryValuesSuccessfully) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_TRUE(result);
     EXPECT_EQ(decode_source, "pb_decode");
     EXPECT_EQ(message.field_1, 42U);
@@ -127,7 +134,8 @@ TEST(TelemetryInterpreterTests, SummaryIncludesDecodeSourceAndFields) {
     std::string summary;
     std::string decode_source;
 
-    TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                 message, summary, decode_source);
     
     EXPECT_NE(summary.find("pb_decode"), std::string::npos);
     EXPECT_NE(summary.find("field_1"), std::string::npos);
@@ -155,7 +163,7 @@ TEST(TelemetryInterpreterTests, SimulationMockPayloadDecodes) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(mock_payload.data(), mock_payload.size(), 
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(mock_payload),
                                                message, summary, decode_source);
     // Should not segfault; may succeed or fail, but gracefully
     EXPECT_NE(decode_source, "");
@@ -171,7 +179,8 @@ TEST(TelemetryInterpreterTests, DecodeTooShortPayloadFails) {
     std::string summary;
     std::string decode_source;
 
-    bool result = TelemetryInterpreter::decode(payload.data(), payload.size(), message, summary, decode_source);
+    bool result = TelemetryInterpreter::decode(std::span<const std::uint8_t>(payload),
+                                               message, summary, decode_source);
     EXPECT_FALSE(result);
     EXPECT_EQ(decode_source, "error");
 }

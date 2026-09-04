@@ -15,7 +15,9 @@
 
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <string>
+#include <vector>
 
 namespace {
     class ConfigurableLoRaModule final : public periph::ILoRaModule {
@@ -28,22 +30,16 @@ namespace {
                 return periph::LoRaStatusCode::Ok;
             }
 
-            periph::LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override {
-                if (buf == nullptr && len > 0)
-                    return {periph::LoRaStatusCode::InvalidArgument, 0};
-
-                return {periph::LoRaStatusCode::Ok, len};
+            periph::LoRaTransmitResult transmit(std::span<const std::uint8_t> payload) override {
+                return {periph::LoRaStatusCode::Ok, payload.size()};
             }
 
-            periph::LoRaReceiveResult receive(uint8_t *buf, size_t max_len,
-                                              uint32_t /*timeout_ms*/) override {
-                if (buf == nullptr)
+            periph::LoRaReceiveResult receive(std::span<std::uint8_t> buffer,
+                                              std::uint32_t /*timeout_ms*/) override {
+                if (buffer.size() < _payload.size())
                     return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
 
-                if (max_len < _payload.size())
-                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
-                std::copy(_payload.begin(), _payload.end(), buf);
+                std::copy(_payload.begin(), _payload.end(), buffer.begin());
                 return {periph::LoRaStatusCode::Ok, _payload.size(), {true, -84, 7.5F}};
             }
 
@@ -60,23 +56,17 @@ namespace {
                 return periph::LoRaStatusCode::Ok;
             }
 
-            periph::LoRaTransmitResult transmit(const uint8_t *buf, size_t len) override {
-                if (buf == nullptr && len > 0)
-                    return {periph::LoRaStatusCode::InvalidArgument, 0};
-
-                return {periph::LoRaStatusCode::Ok, len};
+            periph::LoRaTransmitResult transmit(std::span<const std::uint8_t> payload) override {
+                return {periph::LoRaStatusCode::Ok, payload.size()};
             }
 
-            periph::LoRaReceiveResult receive(uint8_t *buf, size_t max_len,
-                                              uint32_t /*timeout_ms*/) override {
-                if (buf == nullptr)
-                    return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
-
+            periph::LoRaReceiveResult receive(std::span<std::uint8_t> buffer,
+                                              std::uint32_t /*timeout_ms*/) override {
                 const auto payload = Telemetry::Test::payload_mode_2_altitude_16_velocity_500_battery_87();
-                if (max_len < payload.size())
+                if (buffer.size() < payload.size())
                     return {periph::LoRaStatusCode::InvalidArgument, 0, {}};
 
-                std::copy(payload.begin(), payload.end(), buf);
+                std::copy(payload.begin(), payload.end(), buffer.begin());
                 return {periph::LoRaStatusCode::Ok, payload.size(), {true, -84, 7.5F}};
             }
 
@@ -89,11 +79,11 @@ namespace {
                 return periph::LoRaStatusCode::IoError;
             }
 
-            periph::LoRaTransmitResult transmit(const uint8_t * /*buf*/, size_t /*len*/) override {
+            periph::LoRaTransmitResult transmit(std::span<const std::uint8_t> /*payload*/) override {
                 return {periph::LoRaStatusCode::Unsupported, 0};
             }
 
-            periph::LoRaReceiveResult receive(uint8_t * /*buf*/, size_t /*max_len*/,
+            periph::LoRaReceiveResult receive(std::span<std::uint8_t> /*buffer*/,
                                               uint32_t /*timeout_ms*/) override {
                 return {periph::LoRaStatusCode::Unsupported, 0, {}};
             }
@@ -148,7 +138,7 @@ TEST(PipelineTests, Sx1262VirtualMethodsAreCallable) {
     uint8_t buffer[6] = {0, 0, 0, 0, 0, 0};
 
     EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
-    const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
+    const periph::LoRaReceiveResult receive_result = module.receive(std::span<std::uint8_t>(buffer), 50);
     EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Ok);
     EXPECT_EQ(receive_result.bytes_received, 6U);
     EXPECT_TRUE(receive_result.signal.has_signal_metrics);
@@ -160,10 +150,11 @@ TEST(PipelineTests, Sx1262VirtualMethodsAreCallable) {
     EXPECT_EQ(static_cast<unsigned char>(buffer[5]), 87U);
 
     const uint8_t tx_payload[] = {0xAA, 0xBB, 0xCC};
-    EXPECT_EQ(module.transmit(tx_payload, sizeof(tx_payload)).status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(module.transmit(std::span<const std::uint8_t>(tx_payload)).status,
+              periph::LoRaStatusCode::Ok);
 
     uint8_t echoed[3] = {0, 0, 0};
-    const periph::LoRaReceiveResult echoed_result = module.receive(echoed, sizeof(echoed), 50);
+    const periph::LoRaReceiveResult echoed_result = module.receive(std::span<std::uint8_t>(echoed), 50);
     EXPECT_EQ(echoed_result.status, periph::LoRaStatusCode::Ok);
     EXPECT_EQ(echoed_result.bytes_received, 3U);
     EXPECT_EQ(static_cast<unsigned char>(echoed[0]), 0xAAU);
@@ -176,7 +167,7 @@ TEST(PipelineTests, Sx127VirtualMethodsAreCallable) {
     uint8_t buffer[6] = {0, 0, 0, 0, 0, 0};
 
     EXPECT_EQ(module.init(), periph::LoRaStatusCode::Ok);
-    const periph::LoRaReceiveResult receive_result = module.receive(buffer, sizeof(buffer), 50);
+    const periph::LoRaReceiveResult receive_result = module.receive(std::span<std::uint8_t>(buffer), 50);
     EXPECT_EQ(receive_result.status, periph::LoRaStatusCode::Ok);
     EXPECT_EQ(receive_result.bytes_received, 6U);
     EXPECT_TRUE(receive_result.signal.has_signal_metrics);
@@ -188,10 +179,11 @@ TEST(PipelineTests, Sx127VirtualMethodsAreCallable) {
     EXPECT_EQ(static_cast<unsigned char>(buffer[5]), 87U);
 
     const uint8_t tx_payload[] = {0x11, 0x22, 0x33, 0x44};
-    EXPECT_EQ(module.transmit(tx_payload, sizeof(tx_payload)).status, periph::LoRaStatusCode::Ok);
+    EXPECT_EQ(module.transmit(std::span<const std::uint8_t>(tx_payload)).status,
+              periph::LoRaStatusCode::Ok);
 
     uint8_t echoed[4] = {0, 0, 0, 0};
-    const periph::LoRaReceiveResult echoed_result = module.receive(echoed, sizeof(echoed), 50);
+    const periph::LoRaReceiveResult echoed_result = module.receive(std::span<std::uint8_t>(echoed), 50);
     EXPECT_EQ(echoed_result.status, periph::LoRaStatusCode::Ok);
     EXPECT_EQ(echoed_result.bytes_received, 4U);
     EXPECT_EQ(static_cast<unsigned char>(echoed[0]), 0x11U);
@@ -204,8 +196,9 @@ TEST(PipelineTests, Sx1262ReturnsNotInitializedBeforeInit) {
     periph::SX1262Module module;
     uint8_t buffer[4] = {0, 0, 0, 0};
 
-    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::NotInitialized);
-    EXPECT_EQ(module.receive(buffer, sizeof(buffer), 50).status,
+    EXPECT_EQ(module.transmit(std::span<const std::uint8_t>(buffer)).status,
+              periph::LoRaStatusCode::NotInitialized);
+    EXPECT_EQ(module.receive(std::span<std::uint8_t>(buffer), 50).status,
               periph::LoRaStatusCode::NotInitialized);
 }
 
@@ -213,8 +206,9 @@ TEST(PipelineTests, Sx127ReturnsNotInitializedBeforeInit) {
     periph::SX127Module module;
     uint8_t buffer[4] = {0, 0, 0, 0};
 
-    EXPECT_EQ(module.transmit(buffer, sizeof(buffer)).status, periph::LoRaStatusCode::NotInitialized);
-    EXPECT_EQ(module.receive(buffer, sizeof(buffer), 50).status,
+    EXPECT_EQ(module.transmit(std::span<const std::uint8_t>(buffer)).status,
+              periph::LoRaStatusCode::NotInitialized);
+    EXPECT_EQ(module.receive(std::span<std::uint8_t>(buffer), 50).status,
               periph::LoRaStatusCode::NotInitialized);
 }
 
@@ -380,4 +374,3 @@ TEST(PipelineTests, PipelineDoesNotPublishWhenPublishDecodedZmqIsFalse) {
     std::error_code ec;
     std::filesystem::remove("output/no-zmq.bin", ec);
 }
-

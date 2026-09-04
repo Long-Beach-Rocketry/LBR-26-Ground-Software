@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 namespace periph {
     enum class LoRaStatusCode {
@@ -30,12 +31,12 @@ namespace periph {
 
     struct LoRaTransmitResult {
         LoRaStatusCode status = LoRaStatusCode::UnknownError;
-        size_t bytes_transmitted = 0;
+        std::size_t bytes_transmitted = 0;
     };
 
     struct LoRaReceiveResult {
         LoRaStatusCode status = LoRaStatusCode::UnknownError;
-        size_t bytes_received = 0;
+        std::size_t bytes_received = 0;
         LoRaSignalMetrics signal;
     };
 
@@ -57,20 +58,19 @@ namespace periph {
 
             /**
              * @brief Transmit a telemetry payload.
-             * @param buf Pointer to payload bytes.
-             * @param len Number of bytes to send.
+             * @param payload Non-owning view of payload bytes.
              * @return Transmit status and bytes written to the radio module.
              */
-            virtual LoRaTransmitResult transmit(const uint8_t *buf, size_t len) = 0;
+            virtual LoRaTransmitResult transmit(std::span<const std::uint8_t> payload) = 0;
 
             /**
              * @brief Receive telemetry bytes from the LoRa module.
-             * @param buf Destination buffer.
-             * @param max_len Capacity of destination buffer.
+             * @param buffer Non-owning view of the destination buffer.
              * @param timeout_ms Maximum wait for a frame in milliseconds.
              * @return Receive status, bytes received, and optional signal metrics.
              */
-            virtual LoRaReceiveResult receive(uint8_t *buf, size_t max_len, uint32_t timeout_ms) = 0;
+            virtual LoRaReceiveResult receive(std::span<std::uint8_t> buffer,
+                                              std::uint32_t timeout_ms) = 0;
     };
 }
 
